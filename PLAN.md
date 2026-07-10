@@ -63,3 +63,59 @@
 4. 评估为本仓库固定 `rust-toolchain`（≥1.91）以避免 MSRV 漂移。
 5. 定期刷新本 PLAN.md 以反映最新状态。
 
+
+---
+
+## 维护记录（2026-07-10）
+
+### 待办：缺少 PRIVACY.md / TERMS.md 法律文档
+
+`docs/ja/security.md`（第 114-115 行）的页脚链接了 `PRIVACY.md`（隐私政策）和 `TERMS.md`（利用规约），但这两个文件在仓库中任何位置都不存在。英文版 `docs/en/security.md` 没有这些链接（ja 是唯一引用它们的语言）。
+
+这是一个内容缺口：需要撰写实际的隐私政策和服务条款文本，并决定是否需要多语言版本（目前只有 ja 引用）。在此之前，这两个链接会 404。
+
+#### 状态（已处理）
+
+已删除 `docs/ja/security.md` 中指向不存在文件的 `PRIVACY.md` 和 `TERMS.md` 死链（英文版 security.md 本就没有这些链接，说明它们是 ja 独有的悬空引用）。如果未来确实需要隐私政策/服务条款，请先撰写 `PRIVACY.md` / `TERMS.md`（放仓库根目录），再让各语言的 security.md 引用。
+
+### 本次维护已完成
+
+- 修正各语言 README 的 SySL 许可证链接（`./LICENSE.txt` → `./LICENSE`）。
+- 修正 5 个 package README 中 `docs/en-US/` → `docs/en/`。
+- 将未翻译指南的链接（getting-started、vdom、dioxus 迁移、debug-agent、企业支持）改为指向英文原文。
+- 修正 zh-Hans quick-start 中 examples 链接指向实际存在的 examples 目录。
+
+## 维护记录（2026-07-10，第二轮）
+
+### 待办：generator/config.py 有 30 个重复键冲突（真实 bug）
+
+`scripts/generator/config.py`（7788 行的浏览器绑定生成配置）中 ruff 报告 838 个 F601（multi-value-repeated-key-literal）。经分析：
+
+- **808 个是同值重复**（同一个键在多个章节中出现，值相同）—— 无害但冗余，可安全删除后者。
+- **30 个是异值冲突**（同一键被定义两次，值不同）—— 后者会静默覆盖前者，第一个映射丢失。这是真实 bug，例如：
+
+| 键 | 第一次值 | 第二次值（覆盖） |
+|----|---------|----------------|
+| `('service-worker-container','getController')` | `'any'` | `'service-worker'` |
+| `('service-worker-container','getReady')` | `'promise-any'` | `'service-worker-registration'` |
+| `('rtc-sctp-transport','getTransport')` | `'rtc-ice-transport'` | `'rtc-dtls-transport'` |
+| `('css-style-declaration','set-property','priority')` | `True` | `'string'` |
+| `('window','scroll','options')` | `'dictionary:ScrollToOptions | undefined'` | `'any'` |
+| `('document','write','text')` | `'string-from-array'` | `'string'` |
+| ...（共 30 个） | | |
+
+#### 为什么没有自动修复
+
+每个冲突需要熟悉浏览器绑定生成意图的维护者判断哪个值是正确的（第一次还是第二次）。盲目删除任一方都可能改变生成输出。建议：
+
+1. 由维护者逐个确认 30 个异值冲突的正确值。
+2. 删除 808 个同值重复（安全）。
+3. 修复后 ruff F601 计数将归零。
+
+可用 `python -c "import ast; ..."` 脚本（见本轮维护）重新检测冲突。
+
+### 维护记录补充（2026-07-10）
+
+尝试用脚本删除重复键行，但简单的行删除会破坏多行条目和尾随逗号
+（导致 `IndentationError`），已回退。这些重复键需要逐条目语义级编辑
+（而非按行删除），并配合生成器输出对比验证。维持现状（已在上方记录）。
