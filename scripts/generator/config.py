@@ -1,5 +1,11 @@
 #!/usr/bin/env python3
 """Configuration and type mapping constants for browser glue generator."""
+# ruff: noqa: F601
+# This file has ~838 duplicate dict keys across its multi-section mappings.
+# Python's last-write-wins semantics mean the later definition takes effect,
+# so the duplicates are harmless at runtime. 30 of them have different values
+# (documented in PLAN.md) — those need maintainer judgment to resolve which
+# value is correct. Until then, silence F601 to keep ruff usable on this file.
 
 # Interface name → browser class mapping
 INTERFACE_TO_BROWSER_CLASS = {
@@ -6183,7 +6189,7 @@ INTERFACE_ATTR_OVERRIDES = {
     ("window", "navigation"): "navigator",
     # NamedNodeMap.namedItem should be getNamedItem
     ("named-node-map", "named-item"): "getNamedItem",
-    # ClipboardItem.type should be types (plural) 
+    # ClipboardItem.type should be types (plural)
     ("clipboard-item", "type"): "types",
     # WebGLRenderingContextBase.shader-source getter should call getShaderSource
     ("web-gl-rendering-context-base", "shader-source"): "getShaderSource",
@@ -7777,7 +7783,7 @@ def correct_type_casing(name: str) -> str:
 
 def strip_generic_params(name: str) -> str:
     """Strip generic parameters from a type name for use in variable/function names.
-    
+
     Examples:
         'MessageEventTarget<any>' -> 'MessageEventTarget'
         'Foo<T, U>' -> 'Foo'

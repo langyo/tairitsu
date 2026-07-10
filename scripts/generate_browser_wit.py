@@ -323,7 +323,7 @@ def convert_type(type_str: str) -> str:
         # Handle empty or null-only unions
         if not real:
             log_warn(f"Empty or null-only union type '{type_str}', using string fallback")
-            return f"option<string>" if nullable else "string"
+            return "option<string>" if nullable else "string"
 
         # Priority order for union types:
         # 1. Boolean types (for properties like hidden that can be boolean or string)
@@ -340,17 +340,17 @@ def convert_type(type_str: str) -> str:
         # Check for boolean types first
         for p in real:
             if p in boolean_types:
-                return f"option<bool>" if nullable else "bool"
+                return "option<bool>" if nullable else "bool"
 
         # Then check for string types
         for p in real:
             if p in string_types:
-                return f"option<string>" if nullable else "string"
+                return "option<string>" if nullable else "string"
 
         # For numeric types, use f64 as a universal numeric type
         for p in real:
             if p in numeric_types:
-                return f"option<f64>" if nullable else "f64"
+                return "option<f64>" if nullable else "f64"
 
         # Otherwise, use first type (with recursion protection)
         try:
@@ -360,7 +360,7 @@ def convert_type(type_str: str) -> str:
             return f"option<{converted}>" if nullable else converted
         except Exception as e:
             log_warn(f"Error converting union member '{real[0]}': {e}, using string fallback")
-            return f"option<string>" if nullable else "string"
+            return "option<string>" if nullable else "string"
 
     # sequence<T> / FrozenArray<T> / ObservableArray<T>
     m = re.match(r"(?:sequence|FrozenArray|ObservableArray)<(.+)>$", type_str)
@@ -394,10 +394,7 @@ def convert_type(type_str: str) -> str:
         "TextRectangle": "dom-rect",     # Legacy name for DOMRect
     }
 
-    # Also map dom-rect-read-only to dom-rect for now
-    RECORD_TYPE_READONLY_TO_MUTABLE = {
-        "dom-rect-read-only": "dom-rect",
-    }
+    # dom-rect-read-only is mapped to dom-rect inline below.
 
     if type_str in RECORD_TYPE_OVERRIDES:
         result = RECORD_TYPE_OVERRIDES[type_str]
@@ -584,7 +581,7 @@ def _parse_member(stmt: str) -> Optional[WebIDLMember]:
         readonly = stmt.startswith("readonly ")
         if readonly:
             stmt = stmt[9:].lstrip()
-        
+
         # Remove stringifier prefix (e.g., "stringifier attribute USVString href")
         if stmt.startswith("stringifier "):
             stmt = stmt[12:].lstrip()
@@ -799,7 +796,7 @@ def _wit_interface_block(iface: WebIDLInterface) -> Optional[str]:
     if iface.inheritance:
         lines.append(f"/// Inherits: `{iface.inheritance}`")
     if is_singleton:
-        lines.append(f"/// Note: Global singleton - no self parameter needed")
+        lines.append("/// Note: Global singleton - no self parameter needed")
     lines.append(
         f"/// Source: https://github.com/w3c/webref/tree/main/ed/idl/{iface.source_spec}.idl"
     )
@@ -957,12 +954,12 @@ def _generate_special_type_defs(interfaces: List[WebIDLInterface], domain: str) 
         (iface for iface in interfaces if iface.name == "global-event-handlers"),
         None
     )
-    
+
     if global_event_handlers_iface:
         lines.append("/// Event handler function type")
         lines.append("///")
         lines.append("type event-handler-record = record {")
-        
+
         # Collect all event handler names from the interface
         event_handlers = []
         for member in global_event_handlers_iface.members:
@@ -971,17 +968,17 @@ def _generate_special_type_defs(interfaces: List[WebIDLInterface], domain: str) 
                 parts = member.name.split("-")
                 handler_name = parts[0] + "".join(p.capitalize() for p in parts[1:])
                 event_handlers.append(handler_name)
-        
+
         # Generate record fields (sorted for consistency)
         for handler in sorted(event_handlers):
             lines.append(f"    {handler}: option<event-handler-handle>;")
-        
+
         lines.append("};")
         lines.append("")
         lines.append("/// Event handler function handle")
         lines.append("type event-handler-handle = u64;")
         lines.append("")
-    
+
     return lines
 
 def generate_domain_wit(
@@ -1251,7 +1248,7 @@ def _extract_all_interfaces(
 ) -> Tuple[List[str], List[str], List[str], List[str], Set[str]]:
     """
     Extract and deduplicate interfaces from handwritten and generated WIT files.
-    
+
     Returns:
         handwritten_interfaces: interface blocks from handwritten files
         auto_interfaces: interface blocks from generated files (excluding handwritten)
@@ -1303,12 +1300,12 @@ EXPORTED_CALLBACKS = [
 def generate_full_world(output_dir: Path, dry_run: bool = False) -> None:
     """
     Generate browser-full.wit in two formats:
-    
+
     1. **Composed directory** (`wit/composed/`): Multi-file WIT package where
        interface definitions are split across files and `browser-full.wit` is
        a pure world block (~600 lines). This is the format used by wit-bindgen
        and wasmtime for code generation.
-    
+
     2. **Monolithic file** (`wit/browser-full.wit`): All interfaces inlined
        into a single file (~16K lines). Kept for backward compatibility and
        as a human-readable reference.
@@ -1438,7 +1435,7 @@ def _generate_composed(
 ) -> None:
     """
     Generate the composed/ directory as a multi-file WIT package.
-    
+
     Layout:
         composed/
           browser-full.wit  — package declaration + world block only
