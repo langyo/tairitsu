@@ -28,6 +28,9 @@ interface blob {
     /// `arrayBuffer()` operation.
     array-buffer: func(self: blob-handle) -> u64;
 
+    /// `textStream()` operation.
+    text-stream: func(self: blob-handle) -> u64;
+
     /// `bytes()` operation.
     bytes: func(self: blob-handle) -> u64;
 }
@@ -256,6 +259,9 @@ interface body {
 
     /// `text()` operation.
     text: func(self: body-handle) -> u64;
+
+    /// `textStream()` operation.
+    text-stream: func(self: body-handle) -> u64;
 }
 
 interface request {
