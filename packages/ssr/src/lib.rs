@@ -72,19 +72,65 @@ pub fn render_to_html(wasm_bytes: &[u8], config: SsrConfig) -> Result<String> {
     // Create store
     let mut store = Store::new(&engine, host_state);
 
-    // Create linker and register imports
+    // Create linker with allow_shadowing so duplicate func_wrap calls
+    // (existing real impls + auto-generated stubs) don't conflict.
     let mut linker = wasmtime::component::Linker::new(&engine);
+    linker.allow_shadowing(true);
     wasmtime_wasi::p2::add_to_linker_sync(&mut linker)?;
-
-    // Register SSR-specific imports
     register_ssr_imports(&mut linker)?;
 
-    // Instantiate the component using the bindgen-generated bindings
-    // This gives us type-safe access to all exports including lifecycle::start
-    let browser_full = BrowserFull::instantiate(&mut store, &component, &linker)?;
+    // Instantiate: get the raw instance first (for C exports), then wrap in
+    // the bindgen BrowserFull for typed WIT access.
+    let instance = linker.instantiate(&mut store, &component)?;
+    let browser_full = BrowserFull::new(&mut store, &instance)?;
 
-    // Call lifecycle::start using the generated bindings
+    // Call lifecycle::start using the generated bindings (tolerates absence)
     call_lifecycle_start(&mut store, &browser_full)?;
+
+    // Also try the raw C entry point that tairitsu/hikari components export.
+    // Many components use `tairitsu_component_bootstrap()` (a #[no_mangle] C
+    // export) rather than the WIT `lifecycle::start` to mount their UI. If the
+    // lifecycle call produced no content, calling the bootstrap entry mounts
+    // the component's actual UI into the host DOM.
+    let pre_html_len = store.data().dom.render_body_html().len();
+    if pre_html_len < 50 {
+        eprintln!(
+            "[ssr] lifecycle produced only {} bytes, trying bootstrap",
+            pre_html_len
+        );
+        // Enumerate the component's top-level exports to find the entry point.
+        let comp_ty = component.component_type();
+        let exports = comp_ty.exports(&engine);
+        eprintln!("[ssr] component has {} top-level exports:", exports.len());
+        for (name, _) in exports {
+            eprintln!("[ssr]   export: '{}'", name);
+        }
+        // Try each known entry point name
+        let entry_names = ["tairitsu_component_bootstrap", "run", "_start", "start"];
+        let mut called = false;
+        for name in &entry_names {
+            if let Some(export_index) = component.get_export_index(None, name) {
+                if let Some(func) = instance.get_func(&mut store, &export_index) {
+                    eprintln!("[ssr] calling '{}' via get_export_index", name);
+                    match func.call(&mut store, &[], &mut []) {
+                        Ok(_) => {
+                            let post_len = store.data().dom.render_body_html().len();
+                            eprintln!("[ssr] '{}' OK, DOM {} bytes", name, post_len);
+                        }
+                        Err(e) => {
+                            let post_len = store.data().dom.render_body_html().len();
+                            eprintln!("[ssr] '{}' trapped: {} (DOM {} bytes)", name, e, post_len);
+                        }
+                    }
+                    called = true;
+                    break;
+                }
+            }
+        }
+        if !called {
+            eprintln!("[ssr] entry point not found in top-level exports");
+        }
+    }
 
     // Extract HTML from the DOM
     let html = store.data().dom.render_body_html();
@@ -133,28 +179,30 @@ fn register_ssr_imports(linker: &mut wasmtime::component::Linker<SsrHostState>) 
 
 /// Call the lifecycle::start() export on the component
 fn call_lifecycle_start(store: &mut Store<SsrHostState>, browser_full: &BrowserFull) -> Result<()> {
-    // Use the bindgen-generated bindings to call lifecycle::start
-    // The bindings provide type-safe access to all exported interfaces
     let lifecycle = browser_full.tairitsu_browser_full_lifecycle();
 
-    // Call the start function
     match lifecycle.call_start(store) {
         Ok(Ok(())) => {
-            tracing::info!("lifecycle::start() called successfully");
+            eprintln!("[ssr] lifecycle::start() returned Ok(Ok(()))");
             Ok(())
         }
         Ok(Err(e)) => {
-            // The start function returned an error
-            let error_msg = e.to_string();
-            Err(anyhow::anyhow!(
-                "lifecycle::start returned error: {}",
-                error_msg
-            ))
+            eprintln!("[ssr] lifecycle::start() returned Err: {}", e);
+            // Don't fail — extract whatever DOM content was written before the error
+            Ok(())
         }
         Err(e) => {
-            // Failed to call the function (e.g., the export doesn't exist)
-            // This is acceptable for components that don't have lifecycle::start
-            tracing::warn!("lifecycle::start not available or failed to call: {}", e);
+            // Print the full error chain to find which import trapped
+            let mut chain = vec![format!("{}", e)];
+            let mut src = e.source();
+            while let Some(s) = src {
+                chain.push(format!("{}", s));
+                src = s.source();
+            }
+            eprintln!(
+                "[ssr] lifecycle::start() trapped:\n  {}",
+                chain.join("\n  ")
+            );
             Ok(())
         }
     }
