@@ -43,7 +43,7 @@ codegen-units = 1
 panic = "abort"
 
 [workspace.package]
-version = "0.5.16"
+version = "0.5.17"
 authors = ["langyo <langyo.china@gmail.com>"]
 edition = "2021"
 rust-version = "1.91"
@@ -65,7 +65,7 @@ tokio = { version = "^1", default-features = false, features = [
     "time",
     "signal",
 ] }
-wasmtime = { version = "^43", features = ["component-model"] }
+wasmtime = { version = "^45", features = ["component-model"] }
 wasmtime-wasi = "^45"
 reqwest = { version = "^0.13", default-features = false, features = ["json", "blocking"] }
 tairitsu = { version = "^0.5.14", path = "packages/runtime" }
@@ -111,3 +111,21 @@ rand = "^0.8"
 windows-sys = { version = "0.61", default-features = false }
 env_logger = "^0.11"
 log = "^0.4"
+
+# ── Local patches ────────────────────────────────────────────
+# Redirect hikari git deps + crates.io tairitsu-* to local source trees so
+# the whole graph uses one copy of tairitsu-browser-worlds (avoiding the
+# `links` conflict) and consistent versions.
+
+[patch.crates-io]
+tairitsu = { path = "packages/runtime" }
+tairitsu-vdom = { path = "packages/vdom" }
+tairitsu-hooks = { path = "packages/hooks" }
+tairitsu-macros = { path = "packages/macros" }
+tairitsu-style = { path = "packages/style" }
+tairitsu-browser-worlds = { path = "packages/browser-worlds" }
+
+[patch."https://github.com/celestia-island/hikari.git"]
+hikari-palette = { path = "../hikari/packages/palette" }
+hikari-components = { path = "../hikari/packages/components" }
+hikari-icons = { path = "../hikari/packages/icons" }
