@@ -2,6 +2,20 @@
 
 > 本文件记录项目当前状态、近期进展与后续计划。最近一次人工刷新：**2026-07-04**。
 
+## Refresh log 2026-07-14
+
+- **当前分支**：`dev` · 领先 `origin/dev` 0 commits · 工作区有 3 项 dirty
+- **最近提交**：`Merge remote-tracking branch 'origin/master' into dev` (`507b3019`)
+- **未提交改动**：
+  - `M Cargo.toml`
+  - `M packages/ssr/src/lib.rs`
+  - `?? examples/kei-desktop/`（新增目录）
+- **后续动作**：
+  1. review dirty 三项（root `Cargo.toml`、ssr `packages/ssr/src/lib.rs`、新增 `examples/kei-desktop/`）并在 `dev` 上提交，避免 merge master 后脏工作区漂移。
+  2. kei-desktop 示例落地后，补齐 README / 演示脚本，串联 kou（终端 UI）/ kou/mcp 的运行时参考。
+  3. 顶层 `patches/` 长期方案中，评估 WASM Component Model + Node/TypeScript monorepo 的构建一致性；并跟进跨仓 `[patch]` 收敛到 `~/.cargo/config.toml`（见 `entelecheia/PLAN.md` §6 跨仓依赖约定）对 `packages/ssr` 子 crate 链接的影响。
+- **跨仓依赖**：WASM Component Model 全栈 Web 框架（monorepo）；与 kei / kou / hikari / hifumi / kirino / arona / aoba 等 sibling 仓的 SSR / 桌面 / MCP 工具集协同。
+
 ## 1. 项目概述
 
 - **名称**：`tairitsu`
