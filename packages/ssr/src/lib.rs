@@ -58,9 +58,18 @@ use wasmtime::{Engine, Store};
 /// # }
 /// ```
 pub fn render_to_html(wasm_bytes: &[u8], config: SsrConfig) -> Result<String> {
-    // Create engine
+    // Create engine with Winch strategy for faster compilation.
+    // Winch is a baseline (single-pass) compiler that compiles WASM much
+    // faster than Cranelift's optimizing pipeline. This is critical on
+    // QEMU TCG aarch64, where Cranelift's codegen runs under emulation
+    // and takes minutes to JIT-compile a typical tairitsu component.
+    // The generated code is less optimized, but for SSR (one-shot render)
+    // the compile-time savings dominate.
     let mut engine_config = wasmtime::Config::new();
     engine_config.wasm_component_model(true);
+    engine_config.strategy(wasmtime::Strategy::Winch);
+    // Reduce optimization overhead further.
+    engine_config.cranelift_opt_level(wasmtime::OptLevel::None);
     let engine = Engine::new(&engine_config)?;
 
     // Create component from bytes

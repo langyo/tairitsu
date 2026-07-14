@@ -1,0 +1,23 @@
+[package]
+name = "tairitsu-kei-desktop"
+version = "0.1.0"
+edition.workspace = true
+description = "Tairitsu desktop component for kei OS — renders a Windows-like desktop via rsx! → SSR"
+publish = false
+authors = ["langyo <langyo.china@gmail.com>"]
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+# Tairitsu framework packages
+tairitsu-vdom = { path = "../../packages/vdom" }
+tairitsu-macros = { path = "../../packages/macros" }
+tairitsu-web = { path = "../../packages/web", features = [
+    "browser",
+    "vdom",
+    "wit-bindings",
+], default-features = false }
+
+# Logging and error handling
+anyhow = { workspace = true }

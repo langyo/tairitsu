@@ -25,6 +25,7 @@ members = [
     "examples/todo-app",
     "examples/wasi-plugin",
     "examples/website",
+    "examples/kei-desktop",
 ]
 resolver = "2"
 
@@ -65,7 +66,7 @@ tokio = { version = "^1", default-features = false, features = [
     "time",
     "signal",
 ] }
-wasmtime = { version = "^45", features = ["component-model"] }
+wasmtime = { version = "^45", features = ["component-model", "winch"] }
 wasmtime-wasi = "^45"
 reqwest = { version = "^0.13", default-features = false, features = ["json", "blocking"] }
 tairitsu = { version = "^0.5.14", path = "packages/runtime" }
