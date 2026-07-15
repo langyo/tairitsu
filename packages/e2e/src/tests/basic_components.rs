@@ -1,7 +1,7 @@
 use anyhow::Result;
 use std::time::{Duration, Instant};
 
-use thirtyfour::{By, WebDriver};
+use crate::shirabe_driver::{ShirabeDriver, ShirabeElement};
 use tracing::info;
 
 use crate::tests::{Test, TestResult};
@@ -9,7 +9,7 @@ use crate::tests::{Test, TestResult};
 pub struct BasicComponentsTests;
 
 impl BasicComponentsTests {
-    async fn test_button(&self, driver: &WebDriver) -> Result<TestResult> {
+    async fn test_button(&self, driver: &ShirabeDriver) -> Result<TestResult> {
         let start = Instant::now();
         info!("Testing Button component");
 
@@ -20,7 +20,7 @@ impl BasicComponentsTests {
         driver.goto(&test_url).await?;
         tokio::time::sleep(Duration::from_millis(500)).await;
 
-        let button = driver.find(By::Css(".tairitsu-button")).await?;
+        let button = driver.find(".tairitsu-button").await?;
         info!("Button element found");
 
         button.click().await?;
@@ -30,10 +30,8 @@ impl BasicComponentsTests {
 
         let class_attr = button
             .attr("class")
-            .await?
-            .ok_or_else(|| anyhow::anyhow!("No class attribute"))?;
-
-        if !class_attr.contains("tairitsu-button") {
+            .await?;
+if !class_attr.contains("tairitsu-button") {
             return Ok(TestResult::failure(
                 "Button",
                 "Button element missing 'tairitsu-button' class",
@@ -50,7 +48,7 @@ impl BasicComponentsTests {
         })
     }
 
-    async fn test_input(&self, driver: &WebDriver) -> Result<TestResult> {
+    async fn test_input(&self, driver: &ShirabeDriver) -> Result<TestResult> {
         let start = Instant::now();
         info!("Testing Input component");
 
@@ -61,7 +59,7 @@ impl BasicComponentsTests {
         driver.goto(&test_url).await?;
         tokio::time::sleep(Duration::from_millis(500)).await;
 
-        let input = driver.find(By::Css(".tairitsu-input")).await?;
+        let input = driver.find(".tairitsu-input").await?;
         info!("Input element found");
 
         input.send_keys("test input from E2E").await?;
@@ -69,10 +67,8 @@ impl BasicComponentsTests {
 
         let class_attr = input
             .attr("class")
-            .await?
-            .ok_or_else(|| anyhow::anyhow!("No class attribute"))?;
-
-        if !class_attr.contains("tairitsu-input") {
+            .await?;
+if !class_attr.contains("tairitsu-input") {
             return Ok(TestResult::failure(
                 "Input",
                 "Input element missing 'tairitsu-input' class",
@@ -100,7 +96,7 @@ impl Test for BasicComponentsTests {
         Ok(())
     }
 
-    async fn run_with_driver(&self, driver: &WebDriver) -> Result<TestResult> {
+    async fn run_with_driver(&self, driver: &ShirabeDriver) -> Result<TestResult> {
         info!("Running basic components E2E tests");
 
         let mut results = vec![];

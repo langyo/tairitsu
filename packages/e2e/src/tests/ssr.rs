@@ -6,7 +6,7 @@ use anyhow::Result;
 use std::path::PathBuf;
 
 // Import WebDriver for the trait - we don't use it but need it for the impl
-use thirtyfour::WebDriver;
+use crate::shirabe_driver::ShirabeDriver;
 use tracing::info;
 
 use crate::tests::{Test, TestResult};
@@ -271,7 +271,7 @@ impl Test for SsrTests {
         "SSR Tests"
     }
 
-    async fn run_with_driver(&self, _driver: &WebDriver) -> Result<TestResult> {
+    async fn run_with_driver(&self, _driver: &ShirabeDriver) -> Result<TestResult> {
         // Run all SSR tests and aggregate results
         let mut results = vec![];
 

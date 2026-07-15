@@ -10,7 +10,7 @@
 use anyhow::Result;
 use std::time::{Duration, Instant};
 
-use thirtyfour::{By, Key, WebDriver};
+use crate::shirabe_driver::{ShirabeDriver, ShirabeElement};
 use tracing::info;
 
 use crate::tests::{Test, TestResult};
@@ -19,7 +19,7 @@ pub struct FormValidationTests;
 
 impl FormValidationTests {
     /// Test required field validation.
-    async fn test_required_field_validation(&self, driver: &WebDriver) -> Result<TestResult> {
+    async fn test_required_field_validation(&self, driver: &ShirabeDriver) -> Result<TestResult> {
         let start = Instant::now();
         info!("Testing required field validation");
 
@@ -31,8 +31,8 @@ impl FormValidationTests {
         tokio::time::sleep(Duration::from_millis(500)).await;
 
         // Try to submit form without filling required fields
-        let submit_button = driver.find(By::Css("#form-submit")).await.ok();
-        let name_input = driver.find(By::Css("#name-input")).await.ok();
+        let submit_button = driver.find("#form-submit").await.ok();
+        let name_input = driver.find("#name-input").await.ok();
 
         if let (Some(submit), Some(name_input)) = (submit_button, name_input) {
             // Click submit without filling required fields
@@ -40,7 +40,7 @@ impl FormValidationTests {
             tokio::time::sleep(Duration::from_millis(200)).await;
 
             // Check for validation error
-            let error_message = driver.find(By::Css(".validation-error")).await.ok();
+            let error_message = driver.find(".validation-error").await.ok();
             if let Some(error) = error_message {
                 let error_text = error.text().await?;
                 if error_text.contains("required") || error_text.contains("必填") {
@@ -57,7 +57,7 @@ impl FormValidationTests {
             tokio::time::sleep(Duration::from_millis(200)).await;
 
             // Check if form submitted successfully (no error)
-            let success_message = driver.find(By::Css(".form-success")).await.ok();
+            let success_message = driver.find(".form-success").await.ok();
             if let Some(success) = success_message {
                 let success_text = success.text().await?;
                 info!("Form submitted: {}", success_text);
@@ -86,7 +86,7 @@ impl FormValidationTests {
     }
 
     /// Test email validation.
-    async fn test_email_validation(&self, driver: &WebDriver) -> Result<TestResult> {
+    async fn test_email_validation(&self, driver: &ShirabeDriver) -> Result<TestResult> {
         let start = Instant::now();
         info!("Testing email validation");
 
@@ -97,7 +97,7 @@ impl FormValidationTests {
         driver.goto(&test_url).await?;
         tokio::time::sleep(Duration::from_millis(500)).await;
 
-        let email_input = driver.find(By::Css("#email-input")).await.ok();
+        let email_input = driver.find("#email-input").await.ok();
 
         if let Some(email) = email_input {
             // Test invalid email
@@ -105,11 +105,11 @@ impl FormValidationTests {
             tokio::time::sleep(Duration::from_millis(100)).await;
 
             // Trigger validation (blur)
-            email.send_keys(Key::Tab).await?;
+            email.send_keys("Tab").await?;
             tokio::time::sleep(Duration::from_millis(100)).await;
 
             // Check for error
-            let error_element = driver.find(By::Css("#email-error")).await.ok();
+            let error_element = driver.find("#email-error").await.ok();
             if let Some(error) = error_element {
                 let error_text = error.text().await?;
                 if error_text.contains("valid") || error_text.contains("格式") {
@@ -122,11 +122,11 @@ impl FormValidationTests {
             email.send_keys("test@example.com").await?;
             tokio::time::sleep(Duration::from_millis(100)).await;
 
-            email.send_keys(Key::Tab).await?;
+            email.send_keys("Tab").await?;
             tokio::time::sleep(Duration::from_millis(100)).await;
 
             // Error should be gone or show success
-            let success_element = driver.find(By::Css("#email-success")).await.ok();
+            let success_element = driver.find("#email-success").await.ok();
             if let Some(_success) = success_element {
                 info!("Email validation passed");
             }
@@ -153,7 +153,7 @@ impl FormValidationTests {
     }
 
     /// Test password strength validation.
-    async fn test_password_validation(&self, driver: &WebDriver) -> Result<TestResult> {
+    async fn test_password_validation(&self, driver: &ShirabeDriver) -> Result<TestResult> {
         let start = Instant::now();
         info!("Testing password strength validation");
 
@@ -164,8 +164,8 @@ impl FormValidationTests {
         driver.goto(&test_url).await?;
         tokio::time::sleep(Duration::from_millis(500)).await;
 
-        let password_input = driver.find(By::Css("#password-input")).await.ok();
-        let strength_indicator = driver.find(By::Css("#password-strength")).await.ok();
+        let password_input = driver.find("#password-input").await.ok();
+        let strength_indicator = driver.find("#password-strength").await.ok();
 
         if let (Some(password), Some(indicator)) = (password_input, strength_indicator) {
             // Test weak password
@@ -214,7 +214,7 @@ impl FormValidationTests {
     }
 
     /// Test form submission with all validations.
-    async fn test_form_submission(&self, driver: &WebDriver) -> Result<TestResult> {
+    async fn test_form_submission(&self, driver: &ShirabeDriver) -> Result<TestResult> {
         let start = Instant::now();
         info!("Testing complete form submission");
 
@@ -226,10 +226,10 @@ impl FormValidationTests {
         tokio::time::sleep(Duration::from_millis(500)).await;
 
         // Find form elements
-        let name_input = driver.find(By::Css("#name-input")).await.ok();
-        let email_input = driver.find(By::Css("#email-input")).await.ok();
-        let password_input = driver.find(By::Css("#password-input")).await.ok();
-        let submit_button = driver.find(By::Css("#form-submit")).await.ok();
+        let name_input = driver.find("#name-input").await.ok();
+        let email_input = driver.find("#email-input").await.ok();
+        let password_input = driver.find("#password-input").await.ok();
+        let submit_button = driver.find("#form-submit").await.ok();
 
         if let (Some(name), Some(email), Some(password), Some(submit)) =
             (name_input, email_input, password_input, submit_button)
@@ -252,7 +252,7 @@ impl FormValidationTests {
             tokio::time::sleep(Duration::from_millis(300)).await;
 
             // Check for success message
-            let success = driver.find(By::Css(".form-success")).await.ok();
+            let success = driver.find(".form-success").await.ok();
             if let Some(success_msg) = success {
                 let success_text = success_msg.text().await?;
                 info!("Form submission result: {}", success_text);
@@ -284,7 +284,7 @@ impl FormValidationTests {
     }
 
     /// Test form reset functionality.
-    async fn test_form_reset(&self, driver: &WebDriver) -> Result<TestResult> {
+    async fn test_form_reset(&self, driver: &ShirabeDriver) -> Result<TestResult> {
         let start = Instant::now();
         info!("Testing form reset");
 
@@ -295,15 +295,15 @@ impl FormValidationTests {
         driver.goto(&test_url).await?;
         tokio::time::sleep(Duration::from_millis(500)).await;
 
-        let name_input = driver.find(By::Css("#name-input")).await.ok();
-        let reset_button = driver.find(By::Css("#form-reset")).await.ok();
+        let name_input = driver.find("#name-input").await.ok();
+        let reset_button = driver.find("#form-reset").await.ok();
 
         if let (Some(name), Some(reset)) = (name_input, reset_button) {
             // Fill input
             name.send_keys("Test Name").await?;
             tokio::time::sleep(Duration::from_millis(100)).await;
 
-            let filled_value = name.attr("value").await?.unwrap_or_default();
+            let filled_value = name.attr("value").await?;
             info!("Input value before reset: '{}'", filled_value);
 
             // Click reset
@@ -311,7 +311,7 @@ impl FormValidationTests {
             tokio::time::sleep(Duration::from_millis(100)).await;
 
             // Check if cleared
-            let reset_value = name.attr("value").await?.unwrap_or_default();
+            let reset_value = name.attr("value").await?;
             info!("Input value after reset: '{}'", reset_value);
 
             if reset_value.is_empty() || reset_value != filled_value {
@@ -350,7 +350,7 @@ impl Test for FormValidationTests {
         Ok(())
     }
 
-    async fn run_with_driver(&self, driver: &WebDriver) -> Result<TestResult> {
+    async fn run_with_driver(&self, driver: &ShirabeDriver) -> Result<TestResult> {
         info!("Running form validation E2E tests");
 
         let mut results = vec![];

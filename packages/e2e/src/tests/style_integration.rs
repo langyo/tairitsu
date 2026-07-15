@@ -9,7 +9,7 @@ use std::{
     time::{Duration, Instant},
 };
 
-use thirtyfour::WebDriver;
+use crate::shirabe_driver::ShirabeDriver;
 use tracing::info;
 
 use crate::tests::{Test, TestResult, TestStatus};
@@ -25,8 +25,8 @@ fn style_pkg_root() -> PathBuf {
         .join("style")
 }
 
-fn extract_string(ret: &thirtyfour::prelude::ScriptRet) -> String {
-    ret.json().as_str().unwrap_or("").to_string()
+fn extract_string(ret: &serde_json::Value) -> String {
+    ret.as_str().unwrap_or("").to_string()
 }
 
 impl StyleIntegrationTests {
@@ -53,7 +53,7 @@ impl StyleIntegrationTests {
         let categories = parsed
             .get("categories")
             .and_then(|c| c.as_object())
-            .ok_or_else(|| anyhow::anyhow!("Missing or invalid 'categories' key"))?;
+            .ok_or_else(|| anyhow::anyhow!("missing data"))?;
 
         let total_properties: usize = categories
             .values()
@@ -296,7 +296,7 @@ impl StyleIntegrationTests {
         }
     }
 
-    async fn test_browser_computed_styles(&self, driver: &WebDriver) -> Result<TestResult> {
+    async fn test_browser_computed_styles(&self, driver: &ShirabeDriver) -> Result<TestResult> {
         let start = Instant::now();
         info!("Testing computed styles in browser");
 
@@ -354,7 +354,7 @@ impl StyleIntegrationTests {
             test_css
         );
 
-        let _ret = driver.execute(inject_script, vec![]).await?;
+        let _ret = driver.execute(&inject_script, vec![]).await?;
         tokio::time::sleep(Duration::from_millis(200)).await;
 
         let mut failures = Vec::new();
@@ -417,8 +417,8 @@ impl StyleIntegrationTests {
             .execute(
                 r#"const c = document.getElementById('e2e-style-test-container'); if(c) c.remove(); return 'cleaned';"#,
                 vec![],
-            )
-            .await?;
+            ).await?;
+
 
         let duration = start.elapsed().as_millis() as u64;
 
@@ -442,7 +442,7 @@ impl StyleIntegrationTests {
         }
     }
 
-    async fn test_browser_responsive_variants(&self, driver: &WebDriver) -> Result<TestResult> {
+    async fn test_browser_responsive_variants(&self, driver: &ShirabeDriver) -> Result<TestResult> {
         let start = Instant::now();
         info!("Testing responsive variant media queries in browser");
 
@@ -491,8 +491,8 @@ impl StyleIntegrationTests {
             .execute(
                 r#"const el = document.getElementById('e2e-responsive'); if(el) el.remove(); return 'cleaned';"#,
                 vec![],
-            )
-            .await?;
+            ).await?;
+
 
         let duration = start.elapsed().as_millis() as u64;
 
@@ -509,7 +509,7 @@ impl StyleIntegrationTests {
         })
     }
 
-    async fn test_browser_state_variants(&self, driver: &WebDriver) -> Result<TestResult> {
+    async fn test_browser_state_variants(&self, driver: &ShirabeDriver) -> Result<TestResult> {
         let start = Instant::now();
         info!("Testing state variant (hover) in browser");
 
@@ -555,12 +555,9 @@ impl StyleIntegrationTests {
                 .await?,
         );
 
-        let hover_el = driver.find(thirtyfour::By::Css("#e2e-hover")).await?;
-        driver
-            .action_chain()
-            .move_to_element_center(&hover_el)
-            .perform()
-            .await?;
+        let hover_el = driver.find("#e2e-hover").await?;
+
+
         tokio::time::sleep(Duration::from_millis(300)).await;
 
         let hover_bg = extract_string(
@@ -586,8 +583,8 @@ impl StyleIntegrationTests {
             .execute(
                 r#"const el = document.getElementById('e2e-hover'); if(el) el.remove(); return 'cleaned';"#,
                 vec![],
-            )
-            .await?;
+            ).await?;
+
 
         let duration = start.elapsed().as_millis() as u64;
 
@@ -698,7 +695,7 @@ impl Test for StyleIntegrationTests {
         Ok(())
     }
 
-    async fn run_with_driver(&self, driver: &WebDriver) -> Result<TestResult> {
+    async fn run_with_driver(&self, driver: &ShirabeDriver) -> Result<TestResult> {
         info!("Running style integration tests");
 
         let mut results = Vec::new();

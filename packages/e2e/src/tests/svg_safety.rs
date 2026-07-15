@@ -8,7 +8,7 @@
 use anyhow::Result;
 use std::time::{Duration, Instant};
 
-use thirtyfour::WebDriver;
+use crate::shirabe_driver::ShirabeDriver;
 use tracing::info;
 
 use crate::tests::{Test, TestResult, TestStatus};
@@ -16,7 +16,7 @@ use crate::tests::{Test, TestResult, TestStatus};
 pub struct SvgSafetyTests;
 
 impl SvgSafetyTests {
-    async fn navigate_to_base(&self, driver: &WebDriver) -> Result<()> {
+    async fn navigate_to_base(&self, driver: &ShirabeDriver) -> Result<()> {
         let base_url = std::env::var("WEBSITE_BASE_URL")
             .unwrap_or_else(|_| "http://localhost:8080".to_string());
         driver.goto(&base_url).await?;
@@ -24,7 +24,7 @@ impl SvgSafetyTests {
         Ok(())
     }
 
-    async fn test_script_tag_removal(&self, driver: &WebDriver) -> Result<TestResult> {
+    async fn test_script_tag_removal(&self, driver: &ShirabeDriver) -> Result<TestResult> {
         let start = Instant::now();
         info!("Testing SVG script tag removal");
 
@@ -57,7 +57,7 @@ impl SvgSafetyTests {
         "#;
 
         let ret = driver.execute(script, vec![]).await?;
-        let json = ret.json();
+        let json = ret;
         let passed = json
             .get("passed")
             .and_then(|v| v.as_bool())
@@ -91,7 +91,7 @@ impl SvgSafetyTests {
         })
     }
 
-    async fn test_event_handler_removal(&self, driver: &WebDriver) -> Result<TestResult> {
+    async fn test_event_handler_removal(&self, driver: &ShirabeDriver) -> Result<TestResult> {
         let start = Instant::now();
         info!("Testing SVG event handler removal");
 
@@ -146,7 +146,7 @@ impl SvgSafetyTests {
         "#;
 
         let ret = driver.execute(script, vec![]).await?;
-        let json = ret.json();
+        let json = ret;
         let passed = json
             .get("passed")
             .and_then(|v| v.as_bool())
@@ -177,7 +177,7 @@ impl SvgSafetyTests {
         })
     }
 
-    async fn test_javascript_url_removal(&self, driver: &WebDriver) -> Result<TestResult> {
+    async fn test_javascript_url_removal(&self, driver: &ShirabeDriver) -> Result<TestResult> {
         let start = Instant::now();
         info!("Testing SVG javascript: URL removal");
 
@@ -232,7 +232,7 @@ impl SvgSafetyTests {
         "#;
 
         let ret = driver.execute(script, vec![]).await?;
-        let json = ret.json();
+        let json = ret;
         let passed = json
             .get("passed")
             .and_then(|v| v.as_bool())
@@ -263,7 +263,7 @@ impl SvgSafetyTests {
         })
     }
 
-    async fn test_safe_content_preserved(&self, driver: &WebDriver) -> Result<TestResult> {
+    async fn test_safe_content_preserved(&self, driver: &ShirabeDriver) -> Result<TestResult> {
         let start = Instant::now();
         info!("Testing safe SVG content preservation");
 
@@ -330,7 +330,7 @@ impl SvgSafetyTests {
         "##;
 
         let ret = driver.execute(script, vec![]).await?;
-        let json = ret.json();
+        let json = ret;
         let passed = json
             .get("passed")
             .and_then(|v| v.as_bool())
@@ -369,7 +369,7 @@ impl Test for SvgSafetyTests {
 
     fn run_with_driver(
         &self,
-        driver: &WebDriver,
+        driver: &ShirabeDriver,
     ) -> impl std::future::Future<Output = Result<TestResult>> + Send {
         Box::pin(async move {
             info!("Running SVG safety E2E tests");

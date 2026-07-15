@@ -1,6 +1,25 @@
 # tairitsu — 项目状态与计划 (PLAN)
 
-> 本文件记录项目当前状态、近期进展与后续计划。最近一次人工刷新：**2026-07-04**。
+> 本文件记录项目当前状态、近期进展与后续计划。最近一次人工刷新：**2026-07-15**。
+
+## Refresh log 2026-07-15
+
+- **当前分支**：`dev` · 工作区有未提交改动
+- **最近提交**：`✨ Add kei-desktop virtual desktop demo with Winch-accelerated SSR.` (`9e726c54`)
+- **未提交改动**：
+  - `packages/e2e/` — thirtyfour (Selenium WebDriver) → shirabe (CDP) 迁移，消除 aws-lc-rs 传递依赖
+  - `packages/browser/Cargo.toml` — reqwest `rustls` → `rustls-no-provider`；tokio-tungstenite 移除 TLS feature
+  - `packages/browser-test/Cargo.toml` — reqwest `rustls` → `rustls-no-provider`
+  - `packages/browser-wit-resolver/src/resolver.rs` — env 隔离修复
+- **验证结果**：
+  - `cargo check --workspace`：通过（需隐藏 NASM）
+  - `cargo test`（核心包）：26/26 runtime + 19/19 browser-wit-resolver
+  - e2e 全部 13 个测试模块已适配 ShirabeDriver，编译通过
+- **后续动作**：
+  1. 提交上述改动
+  2. kei-desktop 示例落地后补齐 README
+  3. config.py 53 异值冲突 → 需维护者人工确认
+  4. 在 CI 中配置 `AWS_LC_SYS_PREBUILT_NASM=1`
 
 ## Refresh log 2026-07-14
 
@@ -128,7 +147,20 @@
 
 可用 `python -c "import ast; ..."` 脚本（见本轮维护）重新检测冲突。
 
-### 维护记录补充（2026-07-10）
+### 维护记录更新（2026-07-15）
+
+重新用 AST 分析 `scripts/generator/config.py`：
+
+- **53 个异值冲突**——真实 bug，后者静默覆盖前者。冲突涉及 3 类：
+  - 返回类型歧义：`("service-worker-container","getController")`：L1195=`"any"` vs L1842=`"service-worker"`（后者有效）
+  - 参数类型歧义：`("css-style-declaration","set-property","priority")`：L3406=`True` vs L3560=`"string"`（后者有效）
+  - 返回值类型歧义：`("rtc-sctp-transport","getTransport")`：L1970=`"rtc-ice-transport"` vs L2344=`"rtc-dtls-transport"`（后者有效）
+- **每个冲突需维护者根据 WebIDL 规范判断正确值**——盲目删除任一方都可能改变生成输出。
+- 可用 `python -c "import ast; ..."` 脚本重新检测冲突（见本日维护记录）。
+
+### browser-wit-resolver env 测试修复（2026-07-15）
+
+4 个测试因本机 `TAIRITSU_WIT_REGISTRY` / `TAIRITSU_WIT_OFFLINE` 环境变量干扰而失败。修复：添加 `isolate_env()` / `restore_env()` 辅助函数，在每项测试前临时清除 env，测试后恢复。全部 19 个测试通过。
 
 尝试用脚本删除重复键行，但简单的行删除会破坏多行条目和尾随逗号
 （导致 `IndentationError`），已回退。这些重复键需要逐条目语义级编辑

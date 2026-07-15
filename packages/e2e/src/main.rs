@@ -1,19 +1,17 @@
 use anyhow::Result;
-
 use clap::Parser;
-use tairitsu_e2e::run_all_tests;
-use thirtyfour::{DesiredCapabilities, WebDriver};
+use tairitsu_e2e::{run_all_tests, ShirabeDriver};
 use tracing::info;
 
 #[derive(Parser)]
 #[command(name = "tairitsu-e2e")]
-#[command(about = "E2E testing framework for Tairitsu")]
+#[command(about = "E2E testing framework for Tairitsu (CDP-based via Shirabe)")]
 struct Args {
-    #[arg(short, long, default_value = "http://localhost:4444/wd/hub")]
-    selenium_url: String,
-
     #[arg(short, long, default_value = "http://localhost:8080")]
     website_url: String,
+
+    #[arg(short, long, default_value = "9222")]
+    debug_port: u16,
 
     #[arg(short, long, default_value = "./screenshots")]
     screenshots_dir: String,
@@ -28,13 +26,10 @@ async fn main() -> Result<()> {
     std::env::set_var("WEBSITE_BASE_URL", &args.website_url);
     std::env::set_var("E2E_SCREENSHOTS_DIR", &args.screenshots_dir);
 
-    info!("Starting E2E tests...");
-    info!("Selenium URL: {}", args.selenium_url);
+    info!("Starting E2E tests (Shirabe CDP driver)...");
     info!("Website URL: {}", args.website_url);
-    info!("Screenshots dir: {}", args.screenshots_dir);
 
-    let caps = DesiredCapabilities::chrome();
-    let driver = WebDriver::new(&args.selenium_url, caps).await?;
+    let driver = ShirabeDriver::connect(&args.website_url, args.debug_port).await?;
 
     let results = run_all_tests(&driver).await?;
 

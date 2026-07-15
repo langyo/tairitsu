@@ -5,7 +5,7 @@
 use anyhow::Result;
 use std::time::{Duration, Instant};
 
-use thirtyfour::{By, WebDriver};
+use crate::shirabe_driver::{ShirabeDriver, ShirabeElement};
 use tracing::info;
 
 use crate::tests::{Test, TestResult, TestStatus};
@@ -14,7 +14,7 @@ pub struct LifecycleTests;
 
 impl LifecycleTests {
     /// Test component mounting
-    async fn test_component_mount(&self, driver: &WebDriver) -> Result<TestResult> {
+    async fn test_component_mount(&self, driver: &ShirabeDriver) -> Result<TestResult> {
         let start = Instant::now();
         info!("Testing component mount");
 
@@ -26,7 +26,7 @@ impl LifecycleTests {
         tokio::time::sleep(Duration::from_millis(500)).await;
 
         // Check if #app element exists (component should be mounted)
-        let app_element = driver.find(By::Id("app")).await;
+        let app_element = driver.find("app").await;
 
         let duration = start.elapsed().as_millis() as u64;
 
@@ -49,7 +49,7 @@ impl LifecycleTests {
     }
 
     /// Test component rendering
-    async fn test_component_render(&self, driver: &WebDriver) -> Result<TestResult> {
+    async fn test_component_render(&self, driver: &ShirabeDriver) -> Result<TestResult> {
         let start = Instant::now();
         info!("Testing component render");
 
@@ -61,7 +61,7 @@ impl LifecycleTests {
         tokio::time::sleep(Duration::from_millis(500)).await;
 
         // Check if content is rendered
-        let body = driver.find(By::Tag("body")).await?;
+        let body = driver.find("body").await?;
         let text = body.text().await?;
 
         let duration = start.elapsed().as_millis() as u64;
@@ -86,7 +86,7 @@ impl LifecycleTests {
     }
 
     /// Test component update on navigation
-    async fn test_component_update(&self, driver: &WebDriver) -> Result<TestResult> {
+    async fn test_component_update(&self, driver: &ShirabeDriver) -> Result<TestResult> {
         let start = Instant::now();
         info!("Testing component update on navigation");
 
@@ -127,7 +127,7 @@ impl LifecycleTests {
     }
 
     /// Test element creation and attribute setting
-    async fn test_element_creation(&self, driver: &WebDriver) -> Result<TestResult> {
+    async fn test_element_creation(&self, driver: &ShirabeDriver) -> Result<TestResult> {
         let start = Instant::now();
         info!("Testing element creation");
 
@@ -138,7 +138,7 @@ impl LifecycleTests {
         driver.goto(&test_url).await?;
         tokio::time::sleep(Duration::from_millis(500)).await;
 
-        let divs = driver.find_all(By::Tag("div")).await?;
+        let divs = driver.find_all("div").await?;
         let total_elements = divs.len();
 
         let duration = start.elapsed().as_millis() as u64;
@@ -163,7 +163,7 @@ impl LifecycleTests {
     }
 
     /// Test text node rendering
-    async fn test_text_node_rendering(&self, driver: &WebDriver) -> Result<TestResult> {
+    async fn test_text_node_rendering(&self, driver: &ShirabeDriver) -> Result<TestResult> {
         let start = Instant::now();
         info!("Testing text node rendering");
 
@@ -175,11 +175,11 @@ impl LifecycleTests {
         tokio::time::sleep(Duration::from_millis(500)).await;
 
         // Get page title
-        let title = driver.title().await?;
+        let title = driver.execute_script("document.title").await?;
 
         let duration = start.elapsed().as_millis() as u64;
 
-        if !title.is_empty() {
+        if title.as_str().map_or(false, |s| !s.is_empty()) {
             Ok(TestResult {
                 component: "Text Node Rendering".to_string(),
                 status: TestStatus::Success,
@@ -199,7 +199,7 @@ impl LifecycleTests {
     }
 
     /// Test CSS class application
-    async fn test_css_class_application(&self, driver: &WebDriver) -> Result<TestResult> {
+    async fn test_css_class_application(&self, driver: &ShirabeDriver) -> Result<TestResult> {
         let start = Instant::now();
         info!("Testing CSS class application");
 
@@ -211,7 +211,7 @@ impl LifecycleTests {
         tokio::time::sleep(Duration::from_millis(500)).await;
 
         // Look for elements with CSS classes - simplified using find_all
-        let elements_with_class = driver.find_all(By::Css("[class]")).await?;
+        let elements_with_class = driver.find_all("[class]").await?;
 
         let duration = start.elapsed().as_millis() as u64;
 
@@ -238,7 +238,7 @@ impl LifecycleTests {
     }
 
     /// Test style attribute application
-    async fn test_style_attribute_application(&self, driver: &WebDriver) -> Result<TestResult> {
+    async fn test_style_attribute_application(&self, driver: &ShirabeDriver) -> Result<TestResult> {
         let start = Instant::now();
         info!("Testing style attribute application");
 
@@ -250,7 +250,7 @@ impl LifecycleTests {
         tokio::time::sleep(Duration::from_millis(500)).await;
 
         // Look for elements with inline styles - simplified using find_all
-        let elements_with_style = driver.find_all(By::Css("[style]")).await?;
+        let elements_with_style = driver.find_all("[style]").await?;
 
         let duration = start.elapsed().as_millis() as u64;
 
@@ -284,7 +284,7 @@ impl Test for LifecycleTests {
         Ok(())
     }
 
-    async fn run_with_driver(&self, driver: &WebDriver) -> Result<TestResult> {
+    async fn run_with_driver(&self, driver: &ShirabeDriver) -> Result<TestResult> {
         info!("Running component lifecycle tests");
 
         let mut results = vec![];

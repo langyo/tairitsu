@@ -11,7 +11,7 @@
 use anyhow::Result;
 use std::time::{Duration, Instant};
 
-use thirtyfour::{By, WebDriver};
+use crate::shirabe_driver::{ShirabeDriver, ShirabeElement};
 use tracing::info;
 
 use crate::tests::{Test, TestResult};
@@ -20,7 +20,7 @@ pub struct AsyncOperationsTests;
 
 impl AsyncOperationsTests {
     /// Test setTimeout functionality.
-    async fn test_set_timeout(&self, driver: &WebDriver) -> Result<TestResult> {
+    async fn test_set_timeout(&self, driver: &ShirabeDriver) -> Result<TestResult> {
         let start = Instant::now();
         info!("Testing setTimeout functionality");
 
@@ -32,8 +32,8 @@ impl AsyncOperationsTests {
         tokio::time::sleep(Duration::from_millis(500)).await;
 
         // Find timeout button
-        let timeout_button = driver.find(By::Css("#timeout-button")).await.ok();
-        let timeout_result = driver.find(By::Css("#timeout-result")).await.ok();
+        let timeout_button = driver.find("#timeout-button").await.ok();
+        let timeout_result = driver.find("#timeout-result").await.ok();
 
         if let (Some(button), Some(result_div)) = (timeout_button, timeout_result) {
             // Click to trigger setTimeout
@@ -79,7 +79,7 @@ impl AsyncOperationsTests {
     }
 
     /// Test setInterval functionality.
-    async fn test_set_interval(&self, driver: &WebDriver) -> Result<TestResult> {
+    async fn test_set_interval(&self, driver: &ShirabeDriver) -> Result<TestResult> {
         let start = Instant::now();
         info!("Testing setInterval functionality");
 
@@ -90,9 +90,9 @@ impl AsyncOperationsTests {
         driver.goto(&test_url).await?;
         tokio::time::sleep(Duration::from_millis(500)).await;
 
-        let start_button = driver.find(By::Css("#interval-start")).await.ok();
-        let stop_button = driver.find(By::Css("#interval-stop")).await.ok();
-        let counter_display = driver.find(By::Css("#interval-counter")).await.ok();
+        let start_button = driver.find("#interval-start").await.ok();
+        let stop_button = driver.find("#interval-stop").await.ok();
+        let counter_display = driver.find("#interval-counter").await.ok();
 
         if let (Some(start_btn), Some(stop_btn), Some(counter)) =
             (start_button, stop_button, counter_display)
@@ -154,7 +154,7 @@ impl AsyncOperationsTests {
     }
 
     /// Test fetch API calls.
-    async fn test_fetch_api(&self, driver: &WebDriver) -> Result<TestResult> {
+    async fn test_fetch_api(&self, driver: &ShirabeDriver) -> Result<TestResult> {
         let start = Instant::now();
         info!("Testing fetch API");
 
@@ -165,8 +165,8 @@ impl AsyncOperationsTests {
         driver.goto(&test_url).await?;
         tokio::time::sleep(Duration::from_millis(500)).await;
 
-        let fetch_button = driver.find(By::Css("#fetch-button")).await.ok();
-        let fetch_result = driver.find(By::Css("#fetch-result")).await.ok();
+        let fetch_button = driver.find("#fetch-button").await.ok();
+        let fetch_result = driver.find("#fetch-result").await.ok();
 
         if let (Some(button), Some(result_div)) = (fetch_button, fetch_result) {
             // Click to trigger fetch
@@ -209,7 +209,7 @@ impl AsyncOperationsTests {
     }
 
     /// Test Promise handling.
-    async fn test_promise_handling(&self, driver: &WebDriver) -> Result<TestResult> {
+    async fn test_promise_handling(&self, driver: &ShirabeDriver) -> Result<TestResult> {
         let start = Instant::now();
         info!("Testing Promise handling");
 
@@ -220,8 +220,8 @@ impl AsyncOperationsTests {
         driver.goto(&test_url).await?;
         tokio::time::sleep(Duration::from_millis(500)).await;
 
-        let promise_button = driver.find(By::Css("#promise-button")).await.ok();
-        let promise_result = driver.find(By::Css("#promise-result")).await.ok();
+        let promise_button = driver.find("#promise-button").await.ok();
+        let promise_result = driver.find("#promise-result").await.ok();
 
         if let (Some(button), Some(result_div)) = (promise_button, promise_result) {
             // Click to trigger Promise
@@ -267,7 +267,7 @@ impl AsyncOperationsTests {
     }
 
     /// Test async/await patterns.
-    async fn test_async_await(&self, driver: &WebDriver) -> Result<TestResult> {
+    async fn test_async_await(&self, driver: &ShirabeDriver) -> Result<TestResult> {
         let start = Instant::now();
         info!("Testing async/await patterns");
 
@@ -278,8 +278,8 @@ impl AsyncOperationsTests {
         driver.goto(&test_url).await?;
         tokio::time::sleep(Duration::from_millis(500)).await;
 
-        let async_button = driver.find(By::Css("#async-button")).await.ok();
-        let async_result = driver.find(By::Css("#async-result")).await.ok();
+        let async_button = driver.find("#async-button").await.ok();
+        let async_result = driver.find("#async-result").await.ok();
 
         if let (Some(button), Some(result_div)) = (async_button, async_result) {
             // Click to trigger async/await
@@ -322,7 +322,7 @@ impl AsyncOperationsTests {
     }
 
     /// Test clipboard copy operation.
-    async fn test_clipboard_copy(&self, driver: &WebDriver) -> Result<TestResult> {
+    async fn test_clipboard_copy(&self, driver: &ShirabeDriver) -> Result<TestResult> {
         let start = Instant::now();
         info!("Testing clipboard copy operation");
 
@@ -333,7 +333,7 @@ impl AsyncOperationsTests {
         driver.goto(&test_url).await?;
         tokio::time::sleep(Duration::from_millis(500)).await;
 
-        let copy_button = driver.find(By::Css("#clipboard-copy")).await.ok();
+        let copy_button = driver.find("#clipboard-copy").await.ok();
 
         if let Some(button) = copy_button {
             button.click().await?;
@@ -357,7 +357,7 @@ impl AsyncOperationsTests {
 
             match result {
                 Ok(val) => {
-                    let text = val.json().to_string();
+                    let text = val.to_string();
                     info!("Clipboard read after copy: {}", text);
 
                     if text.contains("PERMISSION_DENIED") {
@@ -412,7 +412,7 @@ impl AsyncOperationsTests {
     }
 
     /// Test clipboard read operation.
-    async fn test_clipboard_read(&self, driver: &WebDriver) -> Result<TestResult> {
+    async fn test_clipboard_read(&self, driver: &ShirabeDriver) -> Result<TestResult> {
         let start = Instant::now();
         info!("Testing clipboard read operation");
 
@@ -423,8 +423,8 @@ impl AsyncOperationsTests {
         driver.goto(&test_url).await?;
         tokio::time::sleep(Duration::from_millis(500)).await;
 
-        let paste_button = driver.find(By::Css("#clipboard-paste")).await.ok();
-        let paste_result = driver.find(By::Css("#clipboard-result")).await.ok();
+        let paste_button = driver.find("#clipboard-paste").await.ok();
+        let paste_result = driver.find("#clipboard-result").await.ok();
 
         if let (Some(button), Some(result_div)) = (paste_button, paste_result) {
             button.click().await?;
@@ -469,7 +469,7 @@ impl AsyncOperationsTests {
 
             match permission_check {
                 Ok(val) => {
-                    let status_text = val.json().to_string();
+                    let status_text = val.to_string();
                     info!("Clipboard API availability: {}", status_text);
                     Ok(TestResult {
                         component: "Clipboard Read".to_string(),
@@ -494,7 +494,7 @@ impl AsyncOperationsTests {
     }
 
     /// Test RequestAnimationFrame.
-    async fn test_request_animation_frame(&self, driver: &WebDriver) -> Result<TestResult> {
+    async fn test_request_animation_frame(&self, driver: &ShirabeDriver) -> Result<TestResult> {
         let start = Instant::now();
         info!("Testing RequestAnimationFrame");
 
@@ -505,8 +505,8 @@ impl AsyncOperationsTests {
         driver.goto(&test_url).await?;
         tokio::time::sleep(Duration::from_millis(500)).await;
 
-        let raf_button = driver.find(By::Css("#raf-button")).await.ok();
-        let raf_counter = driver.find(By::Css("#raf-counter")).await.ok();
+        let raf_button = driver.find("#raf-button").await.ok();
+        let raf_counter = driver.find("#raf-counter").await.ok();
 
         if let (Some(button), Some(counter)) = (raf_button, raf_counter) {
             // Click to start animation
@@ -560,7 +560,7 @@ impl Test for AsyncOperationsTests {
         Ok(())
     }
 
-    async fn run_with_driver(&self, driver: &WebDriver) -> Result<TestResult> {
+    async fn run_with_driver(&self, driver: &ShirabeDriver) -> Result<TestResult> {
         info!("Running async operations E2E tests");
 
         let mut results = vec![];

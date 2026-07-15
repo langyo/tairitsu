@@ -251,8 +251,35 @@ mod tests {
 
     // --- ResolveOptions tests ---
 
+    /// Temporarily clear env vars that influence ResolveOptions so tests are
+    /// isolated from the host environment (CI / dev machine may have
+    /// TAIRITSU_WIT_REGISTRY or TAIRITSU_WIT_OFFLINE set).
+    fn isolate_env() -> (Option<String>, Option<String>) {
+        let registry = std::env::var("TAIRITSU_WIT_REGISTRY").ok();
+        let offline = std::env::var("TAIRITSU_WIT_OFFLINE").ok();
+        unsafe {
+            std::env::remove_var("TAIRITSU_WIT_REGISTRY");
+            std::env::remove_var("TAIRITSU_WIT_OFFLINE");
+        }
+        (registry, offline)
+    }
+
+    fn restore_env(registry: Option<String>, offline: Option<String>) {
+        unsafe {
+            match registry {
+                Some(v) => std::env::set_var("TAIRITSU_WIT_REGISTRY", v),
+                None => std::env::remove_var("TAIRITSU_WIT_REGISTRY"),
+            }
+            match offline {
+                Some(v) => std::env::set_var("TAIRITSU_WIT_OFFLINE", v),
+                None => std::env::remove_var("TAIRITSU_WIT_OFFLINE"),
+            }
+        }
+    }
+
     #[test]
     fn resolve_options_default_values() {
+        let (_r, _o) = isolate_env();
         let target_dir = PathBuf::from("/tmp/target");
         let opts = ResolveOptions::new(&target_dir);
         assert_eq!(opts.target_dir, target_dir);
@@ -284,6 +311,7 @@ mod tests {
 
     #[test]
     fn resolver_new() {
+        let (_r, _o) = isolate_env();
         let opts = ResolveOptions::new("/tmp/target");
         let resolver = Resolver::new(opts);
         assert_eq!(resolver.opts.target_dir, PathBuf::from("/tmp/target"));
@@ -308,8 +336,7 @@ mod tests {
 
     #[test]
     fn resolve_options_registry_from_env() {
-        // Save original value
-        let original = std::env::var("TAIRITSU_WIT_REGISTRY").ok();
+        let (saved_registry, saved_offline) = isolate_env();
         unsafe {
             std::env::set_var(
                 "TAIRITSU_WIT_REGISTRY",
@@ -319,31 +346,24 @@ mod tests {
         let opts = ResolveOptions::new("/tmp/target");
         assert_eq!(opts.registry_url, "https://custom-registry.example.com");
         assert!(!opts.offline);
-        // Restore original value
-        match original {
-            Some(v) => unsafe { std::env::set_var("TAIRITSU_WIT_REGISTRY", v) },
-            None => unsafe { std::env::remove_var("TAIRITSU_WIT_REGISTRY") },
-        }
+        restore_env(saved_registry, saved_offline);
     }
 
     #[test]
     fn resolve_options_offline_from_env_true() {
-        let original = std::env::var("TAIRITSU_WIT_OFFLINE").ok();
+        let (saved_registry, saved_offline) = isolate_env();
         unsafe {
             std::env::set_var("TAIRITSU_WIT_OFFLINE", "1");
         }
         let opts = ResolveOptions::new("/tmp/target");
         assert_eq!(opts.registry_url, DEFAULT_REGISTRY);
         assert!(opts.offline);
-        match original {
-            Some(v) => unsafe { std::env::set_var("TAIRITSU_WIT_OFFLINE", v) },
-            None => unsafe { std::env::remove_var("TAIRITSU_WIT_OFFLINE") },
-        }
+        restore_env(saved_registry, saved_offline);
     }
 
     #[test]
     fn resolve_options_offline_from_env_true_case_insensitive() {
-        let original = std::env::var("TAIRITSU_WIT_OFFLINE").ok();
+        let (saved_registry, saved_offline) = isolate_env();
 
         unsafe {
             std::env::set_var("TAIRITSU_WIT_OFFLINE", "TRUE");
@@ -357,15 +377,12 @@ mod tests {
         let opts2 = ResolveOptions::new("/tmp/target");
         assert!(opts2.offline);
 
-        match original {
-            Some(v) => unsafe { std::env::set_var("TAIRITSU_WIT_OFFLINE", v) },
-            None => unsafe { std::env::remove_var("TAIRITSU_WIT_OFFLINE") },
-        }
+        restore_env(saved_registry, saved_offline);
     }
 
     #[test]
     fn resolve_options_offline_from_env_false() {
-        let original = std::env::var("TAIRITSU_WIT_OFFLINE").ok();
+        let (saved_registry, saved_offline) = isolate_env();
 
         unsafe {
             std::env::set_var("TAIRITSU_WIT_OFFLINE", "0");
@@ -379,16 +396,12 @@ mod tests {
         let opts2 = ResolveOptions::new("/tmp/target");
         assert!(!opts2.offline);
 
-        match original {
-            Some(v) => unsafe { std::env::set_var("TAIRITSU_WIT_OFFLINE", v) },
-            None => unsafe { std::env::remove_var("TAIRITSU_WIT_OFFLINE") },
-        }
+        restore_env(saved_registry, saved_offline);
     }
 
     #[test]
     fn resolve_options_both_env_vars() {
-        let original_reg = std::env::var("TAIRITSU_WIT_REGISTRY").ok();
-        let original_off = std::env::var("TAIRITSU_WIT_OFFLINE").ok();
+        let (saved_registry, saved_offline) = isolate_env();
 
         unsafe {
             std::env::set_var("TAIRITSU_WIT_REGISTRY", "https://my-registry.com");
@@ -398,13 +411,6 @@ mod tests {
         assert_eq!(opts.registry_url, "https://my-registry.com");
         assert!(opts.offline);
 
-        match original_reg {
-            Some(v) => unsafe { std::env::set_var("TAIRITSU_WIT_REGISTRY", v) },
-            None => unsafe { std::env::remove_var("TAIRITSU_WIT_REGISTRY") },
-        }
-        match original_off {
-            Some(v) => unsafe { std::env::set_var("TAIRITSU_WIT_OFFLINE", v) },
-            None => unsafe { std::env::remove_var("TAIRITSU_WIT_OFFLINE") },
-        }
+        restore_env(saved_registry, saved_offline);
     }
 }

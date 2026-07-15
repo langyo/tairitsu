@@ -17,9 +17,10 @@ tokio = { workspace = true, features = ["full"] }
 tokio-tungstenite = { version = "^0.27", default-features = false, features = ["connect"] }
 futures = { workspace = true }
 reqwest = { workspace = true, default-features = false, features = [
-  "rustls",
+  "rustls-no-provider",
   "stream",
 ] }
+rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12"] }
 zip = { workspace = true }
 clap = { workspace = true, features = ["env"] }
 indicatif = { workspace = true }

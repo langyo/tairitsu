@@ -27,7 +27,7 @@ pub use ssr::SsrTests;
 pub use state_management::StateManagementTests;
 pub use style_integration::StyleIntegrationTests;
 pub use svg_safety::SvgSafetyTests;
-use thirtyfour::WebDriver;
+use crate::shirabe_driver::ShirabeDriver;
 
 pub trait Test: Send + Sync {
     fn name(&self) -> &str;
@@ -38,7 +38,7 @@ pub trait Test: Send + Sync {
 
     fn run_with_driver(
         &self,
-        driver: &WebDriver,
+        driver: &ShirabeDriver,
     ) -> impl std::future::Future<Output = Result<TestResult>> + Send;
 
     fn teardown(&self) -> Result<()> {
