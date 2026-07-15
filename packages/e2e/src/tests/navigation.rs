@@ -6,7 +6,7 @@
 use anyhow::Result;
 use std::time::{Duration, Instant};
 
-use thirtyfour::{By, WebDriver};
+use crate::shirabe_driver::{ShirabeDriver, ShirabeElement};
 use tracing::info;
 
 use crate::tests::{Test, TestResult};
@@ -15,7 +15,7 @@ pub struct NavigationTests;
 
 impl NavigationTests {
     /// Test hash-based navigation (current website approach).
-    async fn test_hash_navigation(&self, driver: &WebDriver) -> Result<TestResult> {
+    async fn test_hash_navigation(&self, driver: &ShirabeDriver) -> Result<TestResult> {
         let start = Instant::now();
         info!("Testing hash-based navigation");
 
@@ -28,7 +28,7 @@ impl NavigationTests {
 
         // Click on "Guides" link in top nav
         let guides_link = driver
-            .find(By::Css("a[href=\"/guides/quick-start\"]"))
+            .find("a[href=\"/guides/quick-start\"]")
             .await?;
         guides_link.click().await?;
         tokio::time::sleep(Duration::from_millis(300)).await;
@@ -44,12 +44,12 @@ impl NavigationTests {
         }
 
         // Navigate to system overview
-        let system_link = driver.find(By::Css("a[href=\"/system/overview\"]")).await?;
+        let system_link = driver.find("a[href=\"/system/overview\"]").await?;
         system_link.click().await?;
         tokio::time::sleep(Duration::from_millis(300)).await;
 
         // Verify page title or content changed
-        let page_content = driver.find(By::Css(".tairitsu-content")).await?;
+        let page_content = driver.find(".tairitsu-content").await?;
         let text = page_content.text().await?;
         if !text.contains("系统") && !text.contains("System") {
             return Ok(TestResult::failure(
@@ -69,7 +69,7 @@ impl NavigationTests {
     }
 
     /// Test sidebar navigation links.
-    async fn test_sidebar_navigation(&self, driver: &WebDriver) -> Result<TestResult> {
+    async fn test_sidebar_navigation(&self, driver: &ShirabeDriver) -> Result<TestResult> {
         let start = Instant::now();
         info!("Testing sidebar navigation");
 
@@ -80,7 +80,7 @@ impl NavigationTests {
         tokio::time::sleep(Duration::from_millis(500)).await;
 
         // Find sidebar links
-        let sidebar_links = driver.find_all(By::Css(".sidebar-link")).await?;
+        let sidebar_links = driver.find_all(".sidebar-link").await?;
         if sidebar_links.is_empty() {
             return Ok(TestResult::failure(
                 "Sidebar Navigation",
@@ -127,7 +127,7 @@ impl NavigationTests {
     }
 
     /// Test browser back/forward buttons with hash navigation.
-    async fn test_browser_history(&self, driver: &WebDriver) -> Result<TestResult> {
+    async fn test_browser_history(&self, driver: &ShirabeDriver) -> Result<TestResult> {
         let start = Instant::now();
         info!("Testing browser history integration");
 
@@ -139,12 +139,12 @@ impl NavigationTests {
 
         // Navigate to a few pages
         let guides_link = driver
-            .find(By::Css("a[href=\"/guides/quick-start\"]"))
+            .find("a[href=\"/guides/quick-start\"]")
             .await?;
         guides_link.click().await?;
         tokio::time::sleep(Duration::from_millis(200)).await;
 
-        let system_link = driver.find(By::Css("a[href=\"/system/overview\"]")).await?;
+        let system_link = driver.find("a[href=\"/system/overview\"]").await?;
         system_link.click().await?;
         tokio::time::sleep(Duration::from_millis(200)).await;
 
@@ -185,7 +185,7 @@ impl NavigationTests {
     }
 
     /// Test direct URL navigation (deep linking).
-    async fn test_deep_linking(&self, driver: &WebDriver) -> Result<TestResult> {
+    async fn test_deep_linking(&self, driver: &ShirabeDriver) -> Result<TestResult> {
         let start = Instant::now();
         info!("Testing deep linking (direct URL navigation)");
 
@@ -198,7 +198,7 @@ impl NavigationTests {
         tokio::time::sleep(Duration::from_millis(500)).await;
 
         // Verify the correct page is shown
-        let page_content = driver.find(By::Css(".tairitsu-content")).await?;
+        let page_content = driver.find(".tairitsu-content").await?;
         let text = page_content.text().await?;
 
         // Should show quick start content
@@ -232,7 +232,7 @@ impl Test for NavigationTests {
         Ok(())
     }
 
-    async fn run_with_driver(&self, driver: &WebDriver) -> Result<TestResult> {
+    async fn run_with_driver(&self, driver: &ShirabeDriver) -> Result<TestResult> {
         info!("Running navigation E2E tests");
 
         let mut results = vec![];

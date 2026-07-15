@@ -2,32 +2,28 @@
 name = "tairitsu-mcp"
 version.workspace = true
 edition.workspace = true
-description = "Tairitsu MCP server — thin wrapper over shirabe (browser) + kou (VTty) for AI coding assistants"
 authors.workspace = true
 license-file.workspace = true
 repository.workspace = true
+description = "Tairitsu MCP server — vision analysis + browser automation tools"
+
+[lib]
+name = "tairitsu_mcp"
+path = "src/lib.rs"
 
 [[bin]]
 name = "tairitsu-mcp"
 path = "src/main.rs"
 
 [dependencies]
-anyhow = { workspace = true }
-serde = { workspace = true }
-serde_json = { workspace = true }
-tokio = { workspace = true, features = ["rt-multi-thread", "io-std"] }
-tracing = { workspace = true }
-tracing-subscriber = { workspace = true, features = ["env-filter"] }
-reqwest = { workspace = true, features = ["query"] }
-schemars = "^1"
 rmcp = { version = "^1", features = ["server", "transport-io", "macros", "schemars"] }
-# VTty engine — the PTY / VT100 / render stack now lives in the dedicated `kou`
-# crate. This package is just the MCP wiring (tool definitions + delegation).
-kou = { workspace = true }
-# Visual VTty screenshots: base64-encode the PNG `kou` rasterises.
-base64 = { workspace = true }
-# rustls crypto provider — must be installed before any reqwest::Client is built
-# (font-fetch + browser proxy both use rustls-no-provider).
-rustls = { version = "^0.23", default-features = false, features = ["ring", "std", "tls12", "logging"] }
-
-[dev-dependencies]
+schemars = "^1"
+serde = { version = "^1", features = ["derive"] }
+serde_json = "^1"
+tokio = { version = "^1", features = ["full"] }
+reqwest = { version = "^0.12", features = ["json"] }
+anyhow = "^1"
+tracing = "^0.1"
+tracing-subscriber = { version = "^0.3", features = ["env-filter"] }
+toml = "^0.8"
+base64 = "^0.22"

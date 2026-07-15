@@ -6,7 +6,7 @@ use anyhow::Result;
 use std::{fs, path::PathBuf, process::Command, time::Instant};
 
 use tempfile::TempDir;
-use thirtyfour::WebDriver;
+use crate::shirabe_driver::ShirabeDriver;
 use tracing::info;
 
 use crate::tests::{Test, TestResult, TestStatus};
@@ -279,7 +279,7 @@ impl Test for ErrorHandlingTests {
         Ok(())
     }
 
-    async fn run_with_driver(&self, _driver: &WebDriver) -> Result<TestResult> {
+    async fn run_with_driver(&self, _driver: &ShirabeDriver) -> Result<TestResult> {
         info!("Running error handling tests");
 
         let mut results = vec![];

@@ -1,4 +1,4 @@
-<div align="center"><img src="https://raw.githubusercontent.com/celestia-island/tairitsu/master/docs/logo_x256.png" width="120" /></div>
+<div align="center"><img src="https://raw.githubusercontent.com/celestia-island/docs.celestia.world/dev/res/logo/tairitsu.png" width="120" /></div>
 <h1 align="center">Tairitsu</h1>
 <div align="center">
  <strong>Full-stack framework powered by the WASM Component Model</strong>
@@ -137,7 +137,7 @@ Same component, two execution paths:
 
 ## License
 
-Licensed under the [Synthetic Source License (SySL), Version 1.0](./LICENSE.txt).
+Licensed under the [Synthetic Source License (SySL), Version 1.0](./LICENSE).
 ## Name
 
 "Tairitsu" (対立) means "conflict" or "opposition" in Japanese, from the rhythm game [Arcaea](https://arcaea.lowiro.com/).

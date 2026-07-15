@@ -10,6 +10,7 @@ use tempfile::TempDir;
 use tracing::info;
 
 use crate::tests::{Test, TestResult, TestStatus};
+use crate::shirabe_driver::ShirabeDriver;
 
 pub struct BuildTests;
 
@@ -363,7 +364,7 @@ impl Test for BuildTests {
         Ok(())
     }
 
-    async fn run_with_driver(&self, _driver: &thirtyfour::WebDriver) -> Result<TestResult> {
+    async fn run_with_driver(&self, _driver: &ShirabeDriver) -> Result<TestResult> {
         info!("Running build process tests");
 
         let mut results = vec![];

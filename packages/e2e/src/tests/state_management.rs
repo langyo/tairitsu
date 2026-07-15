@@ -9,7 +9,7 @@
 use anyhow::Result;
 use std::time::{Duration, Instant};
 
-use thirtyfour::{By, WebDriver};
+use crate::shirabe_driver::{ShirabeDriver, ShirabeElement};
 use tracing::info;
 
 use crate::tests::{Test, TestResult};
@@ -18,7 +18,7 @@ pub struct StateManagementTests;
 
 impl StateManagementTests {
     /// Test counter state updates (basic use_signal).
-    async fn test_counter_state(&self, driver: &WebDriver) -> Result<TestResult> {
+    async fn test_counter_state(&self, driver: &ShirabeDriver) -> Result<TestResult> {
         let start = Instant::now();
         info!("Testing counter state management");
 
@@ -30,8 +30,8 @@ impl StateManagementTests {
         tokio::time::sleep(Duration::from_millis(500)).await;
 
         // Find counter elements
-        let counter_display = driver.find(By::Css("#counter-display")).await?;
-        let increment_button = driver.find(By::Css("#counter-increment")).await?;
+        let counter_display = driver.find("#counter-display").await?;
+        let increment_button = driver.find("#counter-increment").await?;
 
         // Get initial counter value
         let initial_value = counter_display.text().await?;
@@ -72,7 +72,7 @@ impl StateManagementTests {
     }
 
     /// Test text input state binding.
-    async fn test_input_state_binding(&self, driver: &WebDriver) -> Result<TestResult> {
+    async fn test_input_state_binding(&self, driver: &ShirabeDriver) -> Result<TestResult> {
         let start = Instant::now();
         info!("Testing input state binding");
 
@@ -84,8 +84,8 @@ impl StateManagementTests {
         tokio::time::sleep(Duration::from_millis(500)).await;
 
         // Find input field and its display element
-        let text_input = driver.find(By::Css("#text-input")).await?;
-        let text_display = driver.find(By::Css("#text-display")).await?;
+        let text_input = driver.find("#text-input").await?;
+        let text_display = driver.find("#text-display").await?;
 
         // Type into input
         let test_text = "Hello, Tairitsu!";
@@ -117,7 +117,7 @@ impl StateManagementTests {
     }
 
     /// Test checkbox state (boolean state).
-    async fn test_checkbox_state(&self, driver: &WebDriver) -> Result<TestResult> {
+    async fn test_checkbox_state(&self, driver: &ShirabeDriver) -> Result<TestResult> {
         let start = Instant::now();
         info!("Testing checkbox state");
 
@@ -129,8 +129,8 @@ impl StateManagementTests {
         tokio::time::sleep(Duration::from_millis(500)).await;
 
         // Find checkbox and its display
-        let checkbox = driver.find(By::Css("#toggle-checkbox")).await?;
-        let toggle_display = driver.find(By::Css("#toggle-display")).await?;
+        let checkbox = driver.find("#toggle-checkbox").await?;
+        let toggle_display = driver.find("#toggle-display").await?;
 
         // Get initial state
         let initial_text = toggle_display.text().await?;
@@ -172,7 +172,7 @@ impl StateManagementTests {
     }
 
     /// Test list state management (add/remove items).
-    async fn test_list_state(&self, driver: &WebDriver) -> Result<TestResult> {
+    async fn test_list_state(&self, driver: &ShirabeDriver) -> Result<TestResult> {
         let start = Instant::now();
         info!("Testing list state management");
 
@@ -184,8 +184,8 @@ impl StateManagementTests {
         tokio::time::sleep(Duration::from_millis(500)).await;
 
         // Find add button and list
-        let add_button = driver.find(By::Css("#list-add")).await?;
-        let list_items = driver.find_all(By::Css("#list-display li")).await?;
+        let add_button = driver.find("#list-add").await?;
+        let list_items = driver.find_all("#list-display li").await?;
 
         let initial_count = list_items.len();
         info!("Initial list item count: {}", initial_count);
@@ -198,7 +198,7 @@ impl StateManagementTests {
         }
 
         // Check list grew
-        let new_list_items = driver.find_all(By::Css("#list-display li")).await?;
+        let new_list_items = driver.find_all("#list-display li").await?;
         let new_count = new_list_items.len();
         info!("Final list item count: {}", new_count);
 
@@ -211,11 +211,11 @@ impl StateManagementTests {
 
         // Try removing an item (click first item's remove button)
         if let Some(first_item) = new_list_items.first() {
-            if let Ok(remove_btn) = first_item.find(By::Css(".remove-btn")).await {
+            if let Ok(remove_btn) = first_item.find(".remove-btn").await {
                 remove_btn.click().await?;
                 tokio::time::sleep(Duration::from_millis(50)).await;
 
-                let final_list_items = driver.find_all(By::Css("#list-display li")).await?;
+                let final_list_items = driver.find_all("#list-display li").await?;
                 let final_count = final_list_items.len();
                 info!("List count after removal: {}", final_count);
 
@@ -242,7 +242,7 @@ impl StateManagementTests {
     }
 
     /// Test reactive updates (multiple dependent states).
-    async fn test_reactive_updates(&self, driver: &WebDriver) -> Result<TestResult> {
+    async fn test_reactive_updates(&self, driver: &ShirabeDriver) -> Result<TestResult> {
         let start = Instant::now();
         info!("Testing reactive state updates");
 
@@ -254,9 +254,9 @@ impl StateManagementTests {
         tokio::time::sleep(Duration::from_millis(500)).await;
 
         // Find input for a computed value test
-        let width_input = driver.find(By::Css("#rect-width")).await.ok();
-        let height_input = driver.find(By::Css("#rect-height")).await.ok();
-        let area_display = driver.find(By::Css("#rect-area")).await.ok();
+        let width_input = driver.find("#rect-width").await.ok();
+        let height_input = driver.find("#rect-height").await.ok();
+        let area_display = driver.find("#rect-area").await.ok();
 
         if let (Some(width), Some(height), Some(area)) = (width_input, height_input, area_display) {
             // Clear and set values
@@ -314,7 +314,7 @@ impl Test for StateManagementTests {
         Ok(())
     }
 
-    async fn run_with_driver(&self, driver: &WebDriver) -> Result<TestResult> {
+    async fn run_with_driver(&self, driver: &ShirabeDriver) -> Result<TestResult> {
         info!("Running state management E2E tests");
 
         let mut results = vec![];

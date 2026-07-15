@@ -5,7 +5,7 @@
 use anyhow::Result;
 use std::time::{Duration, Instant};
 
-use thirtyfour::{By, Key, WebDriver};
+use crate::shirabe_driver::{ShirabeDriver, ShirabeElement};
 use tracing::info;
 
 use crate::tests::{Test, TestResult, TestStatus};
@@ -14,7 +14,7 @@ pub struct EventTests;
 
 impl EventTests {
     /// Test click event handling
-    async fn test_click_event(&self, driver: &WebDriver) -> Result<TestResult> {
+    async fn test_click_event(&self, driver: &ShirabeDriver) -> Result<TestResult> {
         let start = Instant::now();
         info!("Testing click event");
 
@@ -26,8 +26,8 @@ impl EventTests {
         tokio::time::sleep(Duration::from_millis(500)).await;
 
         // Find a clickable element
-        let buttons = driver.find_all(By::Tag("button")).await?;
-        let links = driver.find_all(By::Tag("a")).await?;
+        let buttons = driver.find_all("button").await?;
+        let links = driver.find_all("a").await?;
 
         let duration = start.elapsed().as_millis() as u64;
 
@@ -82,7 +82,7 @@ impl EventTests {
     }
 
     /// Test input event handling
-    async fn test_input_event(&self, driver: &WebDriver) -> Result<TestResult> {
+    async fn test_input_event(&self, driver: &ShirabeDriver) -> Result<TestResult> {
         let start = Instant::now();
         info!("Testing input event");
 
@@ -94,8 +94,8 @@ impl EventTests {
         tokio::time::sleep(Duration::from_millis(500)).await;
 
         // Find input elements
-        let inputs = driver.find_all(By::Tag("input")).await?;
-        let textareas = driver.find_all(By::Tag("textarea")).await?;
+        let inputs = driver.find_all("input").await?;
+        let textareas = driver.find_all("textarea").await?;
 
         let duration = start.elapsed().as_millis() as u64;
 
@@ -159,7 +159,7 @@ impl EventTests {
     }
 
     /// Test keyboard event handling
-    async fn test_keyboard_event(&self, driver: &WebDriver) -> Result<TestResult> {
+    async fn test_keyboard_event(&self, driver: &ShirabeDriver) -> Result<TestResult> {
         let start = Instant::now();
         info!("Testing keyboard event");
 
@@ -171,15 +171,15 @@ impl EventTests {
         tokio::time::sleep(Duration::from_millis(500)).await;
 
         // Try sending keyboard events to the body
-        let body = driver.find(By::Tag("body")).await?;
+        let body = driver.find("body").await?;
 
         // Send Tab key
-        match body.send_keys(Key::Tab).await {
+        match body.send_keys("Tab").await {
             Ok(_) => {
                 tokio::time::sleep(Duration::from_millis(100)).await;
 
                 // Send Enter key
-                match body.send_keys(Key::Enter).await {
+                match body.send_keys("Enter").await {
                     Ok(_) => Ok(TestResult {
                         component: "Keyboard Event".to_string(),
                         status: TestStatus::Success,
@@ -207,7 +207,7 @@ impl EventTests {
     }
 
     /// Test focus event handling
-    async fn test_focus_event(&self, driver: &WebDriver) -> Result<TestResult> {
+    async fn test_focus_event(&self, driver: &ShirabeDriver) -> Result<TestResult> {
         let start = Instant::now();
         info!("Testing focus event");
 
@@ -219,7 +219,7 @@ impl EventTests {
         tokio::time::sleep(Duration::from_millis(500)).await;
 
         // Find focusable elements
-        let inputs = driver.find_all(By::Tag("input")).await?;
+        let inputs = driver.find_all("input").await?;
 
         let duration = start.elapsed().as_millis() as u64;
 
@@ -256,7 +256,7 @@ impl EventTests {
     }
 
     /// Test mouse event coordinates
-    async fn test_mouse_event_coordinates(&self, driver: &WebDriver) -> Result<TestResult> {
+    async fn test_mouse_event_coordinates(&self, driver: &ShirabeDriver) -> Result<TestResult> {
         let start = Instant::now();
         info!("Testing mouse event coordinates");
 
@@ -297,7 +297,7 @@ impl EventTests {
 
         match result {
             Ok(ret) => {
-                let js_result: String = ret.json().as_str().unwrap_or("").to_string();
+                let js_result: String = ret.as_str().unwrap_or("").to_string();
                 info!("Mouse coordinate test result: {}", js_result);
 
                 if js_result.contains("x=150,y=200") {
@@ -338,7 +338,7 @@ impl EventTests {
     }
 
     /// Test event listener registration
-    async fn test_event_listener_registration(&self, driver: &WebDriver) -> Result<TestResult> {
+    async fn test_event_listener_registration(&self, driver: &ShirabeDriver) -> Result<TestResult> {
         let start = Instant::now();
         info!("Testing event listener registration");
 
@@ -367,7 +367,7 @@ impl EventTests {
 
         match result {
             Ok(ret) => {
-                let js_result: String = ret.json().as_str().unwrap_or("").to_string();
+                let js_result: String = ret.as_str().unwrap_or("").to_string();
                 info!("Event listener test result: {}", js_result);
 
                 if js_result == "listener fires" {
@@ -407,7 +407,7 @@ impl EventTests {
     }
 
     /// Test form submission event
-    async fn test_form_submission(&self, driver: &WebDriver) -> Result<TestResult> {
+    async fn test_form_submission(&self, driver: &ShirabeDriver) -> Result<TestResult> {
         let start = Instant::now();
         info!("Testing form submission event");
 
@@ -423,9 +423,9 @@ impl EventTests {
             var forms = document.querySelectorAll('form');
             if (forms.length === 0) return 'no forms';
             var submitted = false;
-            forms[0].addEventListener('submit', function(e) { 
-                e.preventDefault(); 
-                submitted = true; 
+            forms[0].addEventListener('submit', function(e) {
+                e.preventDefault();
+                submitted = true;
             });
             var submitBtn = forms[0].querySelector('button[type="submit"], input[type="submit"]');
             if (submitBtn) submitBtn.click();
@@ -439,7 +439,7 @@ impl EventTests {
 
         match result {
             Ok(ret) => {
-                let js_result: String = ret.json().as_str().unwrap_or("").to_string();
+                let js_result: String = ret.as_str().unwrap_or("").to_string();
                 info!("Form submission test result: {}", js_result);
 
                 if js_result == "submit intercepted" {
@@ -480,7 +480,7 @@ impl EventTests {
     }
 
     /// Test scroll event
-    async fn test_scroll_event(&self, driver: &WebDriver) -> Result<TestResult> {
+    async fn test_scroll_event(&self, driver: &ShirabeDriver) -> Result<TestResult> {
         let start = Instant::now();
         info!("Testing scroll event");
 
@@ -505,7 +505,7 @@ impl EventTests {
 
         match result {
             Ok(ret) => {
-                let js_result: String = ret.json().as_str().unwrap_or("").to_string();
+                let js_result: String = ret.as_str().unwrap_or("").to_string();
                 info!("Scroll test result: {}", js_result);
 
                 Ok(TestResult {
@@ -537,7 +537,7 @@ impl Test for EventTests {
         Ok(())
     }
 
-    async fn run_with_driver(&self, driver: &WebDriver) -> Result<TestResult> {
+    async fn run_with_driver(&self, driver: &ShirabeDriver) -> Result<TestResult> {
         info!("Running event handling tests");
 
         let mut results = vec![];
