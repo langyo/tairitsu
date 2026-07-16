@@ -174,12 +174,12 @@ impl EventTests {
         let body = driver.find("body").await?;
 
         // Send Tab key
-        match body.send_keys("Tab").await {
+        match body.press_key("Tab").await {
             Ok(_) => {
                 tokio::time::sleep(Duration::from_millis(100)).await;
 
                 // Send Enter key
-                match body.send_keys("Enter").await {
+                match body.press_key("Enter").await {
                     Ok(_) => Ok(TestResult {
                         component: "Keyboard Event".to_string(),
                         status: TestStatus::Success,

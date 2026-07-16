@@ -27,9 +27,7 @@ impl NavigationTests {
         tokio::time::sleep(Duration::from_millis(500)).await;
 
         // Click on "Guides" link in top nav
-        let guides_link = driver
-            .find("a[href=\"/guides/quick-start\"]")
-            .await?;
+        let guides_link = driver.find("a[href=\"/guides/quick-start\"]").await?;
         guides_link.click().await?;
         tokio::time::sleep(Duration::from_millis(300)).await;
 
@@ -138,9 +136,7 @@ impl NavigationTests {
         tokio::time::sleep(Duration::from_millis(500)).await;
 
         // Navigate to a few pages
-        let guides_link = driver
-            .find("a[href=\"/guides/quick-start\"]")
-            .await?;
+        let guides_link = driver.find("a[href=\"/guides/quick-start\"]").await?;
         guides_link.click().await?;
         tokio::time::sleep(Duration::from_millis(200)).await;
 

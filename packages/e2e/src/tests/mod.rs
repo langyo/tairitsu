@@ -14,6 +14,7 @@ pub mod svg_safety;
 
 use anyhow::Result;
 
+use crate::shirabe_driver::ShirabeDriver;
 pub use async_operations::AsyncOperationsTests;
 pub use basic_components::BasicComponentsTests;
 pub use build::BuildTests;
@@ -27,7 +28,6 @@ pub use ssr::SsrTests;
 pub use state_management::StateManagementTests;
 pub use style_integration::StyleIntegrationTests;
 pub use svg_safety::SvgSafetyTests;
-use crate::shirabe_driver::ShirabeDriver;
 
 pub trait Test: Send + Sync {
     fn name(&self) -> &str;

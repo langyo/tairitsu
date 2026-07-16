@@ -419,7 +419,6 @@ impl StyleIntegrationTests {
                 vec![],
             ).await?;
 
-
         let duration = start.elapsed().as_millis() as u64;
 
         if failures.is_empty() {
@@ -493,7 +492,6 @@ impl StyleIntegrationTests {
                 vec![],
             ).await?;
 
-
         let duration = start.elapsed().as_millis() as u64;
 
         Ok(TestResult {
@@ -557,7 +555,6 @@ impl StyleIntegrationTests {
 
         let hover_el = driver.find("#e2e-hover").await?;
 
-
         tokio::time::sleep(Duration::from_millis(300)).await;
 
         let hover_bg = extract_string(
@@ -584,7 +581,6 @@ impl StyleIntegrationTests {
                 r#"const el = document.getElementById('e2e-hover'); if(el) el.remove(); return 'cleaned';"#,
                 vec![],
             ).await?;
-
 
         let duration = start.elapsed().as_millis() as u64;
 
