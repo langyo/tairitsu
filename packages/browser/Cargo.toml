@@ -1,8 +1,8 @@
 [package]
 name = "tairitsu-browser"
 version = "0.5.13"
-edition = "2024"
-rust-version = "1.85"
+edition.workspace = true
+rust-version.workspace = true
 authors = ["langyo <langyo.china@gmail.com>"]
 license-file = "LICENSE"
 description = "Lightweight headless browser automation — CDP engine + HTTP debug API"
