@@ -190,7 +190,17 @@ fn expand_file_scss(path: &str, scope: Option<&str>, no_hash: bool) -> TokenStre
         }
     };
 
-    let (css, class_map) = compile_scss_with_hashing(&content, scope, no_hash);
+    // grass compiles from a string, so relative `@use`/`@import` paths have no
+    // base directory by default and fail with "can't find stylesheet". Offer
+    // the SCSS file's own directory (SCSS-relative semantics) and the crate
+    // root as load paths.
+    let mut load_paths: Vec<std::path::PathBuf> = Vec::new();
+    if let Some(parent) = full_path.parent() {
+        load_paths.push(parent.to_path_buf());
+    }
+    load_paths.push(std::path::PathBuf::from(&crate_root));
+
+    let (css, class_map) = compile_scss_inner(&content, scope, no_hash, &load_paths);
     generate_output(css, class_map)
 }
 
@@ -224,6 +234,15 @@ fn compile_scss_with_hashing(
     scope: Option<&str>,
     no_hash: bool,
 ) -> (String, HashMap<String, String>) {
+    compile_scss_inner(scss, scope, no_hash, &[])
+}
+
+fn compile_scss_inner(
+    scss: &str,
+    scope: Option<&str>,
+    no_hash: bool,
+    load_paths: &[std::path::PathBuf],
+) -> (String, HashMap<String, String>) {
     let mut class_map = HashMap::new();
 
     let processed_scss = if no_hash {
@@ -242,7 +261,8 @@ fn compile_scss_with_hashing(
         process_class_names(scss, &hash_str, &mut class_map)
     };
 
-    let css = match grass::from_string(&processed_scss, &grass::Options::default()) {
+    let options = grass::Options::default().load_paths(load_paths);
+    let css = match grass::from_string(&processed_scss, &options) {
         Ok(css) => css,
         Err(e) => {
             eprintln!("SCSS compilation failed: {}", e);
@@ -586,6 +606,20 @@ mod tests {
             !class_map.contains_key("get"),
             "map.get() is a call, not a class"
         );
+    }
+
+    #[test]
+    fn test_use_resolves_against_load_paths() {
+        let dir = std::env::temp_dir().join(format!("tairitsu-scss-test-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(dir.join("_vars.scss"), "$c: #131e32;").unwrap();
+
+        let scss = "@use 'vars' as v; .card { background: v.$c; }";
+        let (css, _map) = compile_scss_inner(scss, None, true, std::slice::from_ref(&dir));
+
+        std::fs::remove_dir_all(&dir).ok();
+        assert!(!css.contains("CSS generation failed"), "got: {css}");
+        assert!(css.contains("#131e32"), "got: {css}");
     }
 
     #[test]
