@@ -1,5 +1,8 @@
 [advisories]
-ignore = []
+ignore = [
+    "RUSTSEC-2024-0436",
+    "RUSTSEC-2017-0008",
+]
 
 [licenses]
 allow = [
@@ -19,6 +22,31 @@ allow = [
     "LicenseRef-sysl-1.0",
 ]
 confidence-threshold = 0.8
+exceptions = [
+    { allow = ["LicenseRef-PROPRIETARY"], crate = "tairitsu" },
+    { allow = ["LicenseRef-PROPRIETARY"], crate = "tairitsu-browser" },
+    { allow = ["LicenseRef-PROPRIETARY"], crate = "tairitsu-browser-fetch" },
+    { allow = ["LicenseRef-PROPRIETARY"], crate = "tairitsu-browser-test" },
+    { allow = ["LicenseRef-PROPRIETARY"], crate = "tairitsu-browser-wit-resolver" },
+    { allow = ["LicenseRef-PROPRIETARY"], crate = "tairitsu-browser-worlds" },
+    { allow = ["LicenseRef-PROPRIETARY"], crate = "tairitsu-hooks" },
+    { allow = ["LicenseRef-PROPRIETARY"], crate = "tairitsu-macros" },
+    { allow = ["LicenseRef-PROPRIETARY"], crate = "tairitsu-mcp" },
+    { allow = ["LicenseRef-PROPRIETARY"], crate = "tairitsu-packager" },
+    { allow = ["LicenseRef-PROPRIETARY"], crate = "tairitsu-ssr" },
+    { allow = ["LicenseRef-PROPRIETARY"], crate = "tairitsu-style" },
+    { allow = ["LicenseRef-PROPRIETARY"], crate = "tairitsu-vdom" },
+    { allow = ["LicenseRef-PROPRIETARY"], crate = "tairitsu-web" },
+    { allow = ["LicenseRef-PROPRIETARY"], crate = "tairitsu-example-todo-app" },
+    { allow = ["LicenseRef-PROPRIETARY"], crate = "tairitsu-example-wasi-plugin" },
+    { allow = ["LicenseRef-PROPRIETARY"], crate = "tairitsu-example-wit-compile-time" },
+    { allow = ["LicenseRef-PROPRIETARY"], crate = "tairitsu-example-wit-dynamic-advanced" },
+    { allow = ["LicenseRef-PROPRIETARY"], crate = "tairitsu-example-wit-runtime" },
+    { allow = ["LicenseRef-PROPRIETARY"], crate = "tairitsu-example-wit-native-simple" },
+    { allow = ["LicenseRef-PROPRIETARY"], crate = "tairitsu-example-wit-native-macro" },
+    { allow = ["LicenseRef-PROPRIETARY"], crate = "tairitsu-kei-desktop" },
+    { allow = ["LicenseRef-PROPRIETARY"], crate = "vtty-graphics-demo" },
+]
 
 [bans]
 multiple-versions = "warn"
