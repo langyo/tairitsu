@@ -1,6 +1,7 @@
 [package]
 name = "vtty-graphics-demo"
 version.workspace = true
+license = "MIT"
 edition.workspace = true
 publish = false
 

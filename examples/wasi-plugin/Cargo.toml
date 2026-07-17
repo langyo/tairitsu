@@ -1,6 +1,7 @@
 [package]
 name = "tairitsu-example-wasi-plugin"
 version = "0.1.0"
+license = "MIT"
 edition.workspace = true
 publish = false
 
