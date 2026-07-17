@@ -39,9 +39,10 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y --no-install-recommends libgtk-3-dev libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
 
-      - name: Remove e2e from workspace and local patches
+      - name: Remove e2e/website from workspace and local patches
         run: |
           sed -i '/"packages\/e2e",/d; s/,"packages\/e2e"//g' Cargo.toml
+          sed -i '/"examples\/website",/d; s/,"examples\/website"//g' Cargo.toml
           sed -i '/path = "\.\.\/hikari/d' Cargo.toml
           rm -f .cargo/config.toml Cargo.lock
 
