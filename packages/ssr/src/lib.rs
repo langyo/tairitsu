@@ -119,7 +119,7 @@ pub fn render_to_html(wasm_bytes: &[u8], config: SsrConfig) -> Result<String> {
         let mut called = false;
         for name in &entry_names {
             if let Some(export_index) = component.get_export_index(None, name) {
-                if let Some(func) = instance.get_func(&mut store, &export_index) {
+                if let Some(func) = instance.get_func(&mut store, export_index) {
                     eprintln!("[ssr] calling '{}' via get_export_index", name);
                     match func.call(&mut store, &[], &mut []) {
                         Ok(_) => {
