@@ -200,7 +200,8 @@ fn expand_file_scss(path: &str, scope: Option<&str>, no_hash: bool) -> TokenStre
     }
     load_paths.push(std::path::PathBuf::from(&crate_root));
 
-    let (css, class_map) = compile_scss_inner(&content, scope, no_hash, &load_paths);
+    let (css, class_map) =
+        compile_scss_inner(&content, scope, no_hash, &load_paths, Some(&full_path));
     generate_output(css, class_map)
 }
 
@@ -234,7 +235,7 @@ fn compile_scss_with_hashing(
     scope: Option<&str>,
     no_hash: bool,
 ) -> (String, HashMap<String, String>) {
-    compile_scss_inner(scss, scope, no_hash, &[])
+    compile_scss_inner(scss, scope, no_hash, &[], None)
 }
 
 fn compile_scss_inner(
@@ -242,6 +243,7 @@ fn compile_scss_inner(
     scope: Option<&str>,
     no_hash: bool,
     load_paths: &[std::path::PathBuf],
+    source_path: Option<&std::path::Path>,
 ) -> (String, HashMap<String, String>) {
     let mut class_map = HashMap::new();
 
@@ -262,7 +264,16 @@ fn compile_scss_inner(
     };
 
     let options = grass::Options::default().load_paths(load_paths);
-    let css = match grass::from_string(&processed_scss, &options) {
+    // For untouched (no_hash) file sources, let grass read the file itself so
+    // relative `@use`/`@import` urls resolve against the file's own directory.
+    // `from_string` gives them a synthetic `./stdin` base instead, and grass's
+    // load-path fallback is skipped entirely for extension-qualified urls
+    // (its `find_import` short-circuits with a `// todo: consider load paths`).
+    let compiled = match source_path {
+        Some(p) if no_hash => grass::from_path(p, &options),
+        _ => grass::from_string(&processed_scss, &options),
+    };
+    let css = match compiled {
         Ok(css) => css,
         Err(e) => {
             eprintln!("SCSS compilation failed: {}", e);
@@ -615,7 +626,35 @@ mod tests {
         std::fs::write(dir.join("_vars.scss"), "$c: #131e32;").unwrap();
 
         let scss = "@use 'vars' as v; .card { background: v.$c; }";
-        let (css, _map) = compile_scss_inner(scss, None, true, std::slice::from_ref(&dir));
+        let (css, _map) = compile_scss_inner(scss, None, true, std::slice::from_ref(&dir), None);
+
+        std::fs::remove_dir_all(&dir).ok();
+        assert!(!css.contains("CSS generation failed"), "got: {css}");
+        assert!(css.contains("#131e32"), "got: {css}");
+    }
+
+    #[test]
+    fn test_file_source_resolves_relative_use_with_extension() {
+        // Regression: hikari components write
+        // `@use '../../../../theme/styles/variables.scss' as vars;` — an
+        // explicit `.scss` extension, which grass's load-path fallback never
+        // consults; only from_path gives it a real base directory.
+        let dir = std::env::temp_dir().join(format!("tairitsu-scss-use-{}", std::process::id()));
+        let theme = dir.join("theme");
+        let comp = dir.join("components");
+        std::fs::create_dir_all(&theme).unwrap();
+        std::fs::create_dir_all(&comp).unwrap();
+        std::fs::write(theme.join("variables.scss"), "$c: #131e32;").unwrap();
+        let main = comp.join("card.scss");
+        std::fs::write(
+            &main,
+            "@use '../theme/variables.scss' as vars; .card { background: vars.$c; }",
+        )
+        .unwrap();
+
+        let content = std::fs::read_to_string(&main).unwrap();
+        let load_paths = vec![comp.clone(), dir.clone()];
+        let (css, _map) = compile_scss_inner(&content, None, true, &load_paths, Some(&main));
 
         std::fs::remove_dir_all(&dir).ok();
         assert!(!css.contains("CSS generation failed"), "got: {css}");
