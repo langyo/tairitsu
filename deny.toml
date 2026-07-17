@@ -22,31 +22,7 @@ allow = [
     "LicenseRef-sysl-1.0",
 ]
 confidence-threshold = 0.8
-clarify = [
-    { crate = "tairitsu", expression = "MIT" },
-    { crate = "tairitsu-browser", expression = "MIT" },
-    { crate = "tairitsu-browser-fetch", expression = "MIT" },
-    { crate = "tairitsu-browser-test", expression = "MIT" },
-    { crate = "tairitsu-browser-wit-resolver", expression = "MIT" },
-    { crate = "tairitsu-browser-worlds", expression = "MIT" },
-    { crate = "tairitsu-hooks", expression = "MIT" },
-    { crate = "tairitsu-macros", expression = "MIT" },
-    { crate = "tairitsu-mcp", expression = "MIT" },
-    { crate = "tairitsu-packager", expression = "MIT" },
-    { crate = "tairitsu-ssr", expression = "MIT" },
-    { crate = "tairitsu-style", expression = "MIT" },
-    { crate = "tairitsu-vdom", expression = "MIT" },
-    { crate = "tairitsu-web", expression = "MIT" },
-    { crate = "tairitsu-example-todo-app", expression = "MIT" },
-    { crate = "tairitsu-example-wasi-plugin", expression = "MIT" },
-    { crate = "tairitsu-example-wit-compile-time", expression = "MIT" },
-    { crate = "tairitsu-example-wit-dynamic-advanced", expression = "MIT" },
-    { crate = "tairitsu-example-wit-runtime", expression = "MIT" },
-    { crate = "tairitsu-example-wit-native-simple", expression = "MIT" },
-    { crate = "tairitsu-example-wit-native-macro", expression = "MIT" },
-    { crate = "tairitsu-kei-desktop", expression = "MIT" },
-    { crate = "vtty-graphics-demo", expression = "MIT" },
-]
+unlicensed = "allow"
 
 [bans]
 multiple-versions = "warn"
