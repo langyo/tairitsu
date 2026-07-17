@@ -207,10 +207,13 @@ fn generate_output(css: String, class_map: HashMap<String, String>) -> TokenStre
 
     quote! {
         {
-            let css = #css;
-            let class_map = std::collections::HashMap::from([
-                #(#map_entries),*
-            ]);
+            // Explicit types: with `no_hash` (or any class-less input) the map
+            // is empty, and `HashMap::from([])` cannot infer K/V otherwise.
+            let css: &'static str = #css;
+            let class_map: std::collections::HashMap<&'static str, &'static str> =
+                std::collections::HashMap::from([
+                    #(#map_entries),*
+                ]);
             (css, class_map)
         }
     }
