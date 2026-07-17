@@ -26,7 +26,9 @@ jobs:
         run: sed -i '/"packages\/e2e"/d' Cargo.toml
 
       - name: Remove machine-specific patches
-        run: rm -f .cargo/config.toml
+        run: |
+          rm -f .cargo/config.toml
+          rm -f Cargo.lock
 
       - name: Run fmt
         # no `--all`: a virtual workspace `cargo fmt` formats all members and
