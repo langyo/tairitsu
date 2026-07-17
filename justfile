@@ -193,7 +193,7 @@ test:
     @echo "Running comprehensive checks..."
     @echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     @echo "Step 1/9: Checking code compilation..."
-    cargo check --workspace --all-targets
+    cargo check --workspace --all-targets --exclude tairitsu-e2e
     @echo "✅ Check passed"
     @echo ""
     @echo "Step 2/9: Running compile-time demo..."

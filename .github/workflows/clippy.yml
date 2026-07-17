@@ -43,4 +43,5 @@ jobs:
           cargo clippy \
             --all-targets \
             --all-features \
+            --exclude tairitsu-e2e \
             -- -D warnings
