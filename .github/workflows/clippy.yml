@@ -41,6 +41,9 @@ jobs:
       - name: Remove e2e from workspace (external path dep)
         run: sed -i '/"packages\/e2e"/d' Cargo.toml
 
+      - name: Remove machine-specific patches
+        run: sed -i '/^\[patch/,/^$/d' .cargo/config.toml
+
       - name: Run clippy
         run: |
           cargo clippy \

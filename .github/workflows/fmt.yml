@@ -25,6 +25,9 @@ jobs:
       - name: Remove e2e from workspace (external path dep)
         run: sed -i '/"packages\/e2e"/d' Cargo.toml
 
+      - name: Remove machine-specific patches
+        run: sed -i '/^\[patch/,/^$/d' .cargo/config.toml
+
       - name: Run fmt
         # no `--all`: a virtual workspace `cargo fmt` formats all members and
         # avoids traversing path deps (e.g. the local `../kou` dev override)
