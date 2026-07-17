@@ -24,7 +24,7 @@ jobs:
 
       - name: Remove e2e from workspace and local patches
         run: |
-          sed -i '/"packages\/e2e"/d' Cargo.toml
+          sed -i '/"packages\/e2e",/d; s/,"packages\/e2e"//g' Cargo.toml
           sed -i '/path = "\.\.\/hikari/d' Cargo.toml
           rm -f .cargo/config.toml Cargo.lock
 
