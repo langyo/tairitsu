@@ -39,11 +39,10 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y --no-install-recommends libgtk-3-dev libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
 
-      - name: Remove e2e from workspace (external path dep)
-        run: sed -i '/"packages\/e2e"/d' Cargo.toml
-
-      - name: Remove machine-specific patches
+      - name: Remove e2e from workspace and local patches
         run: |
+          sed -i '/"packages\/e2e"/d' Cargo.toml
+          sed -i '/^\[patch/,/^$/d' Cargo.toml
           rm -f .cargo/config.toml
           rm -f Cargo.lock
 

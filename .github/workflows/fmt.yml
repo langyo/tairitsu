@@ -22,11 +22,10 @@ jobs:
         with:
           components: rustfmt
 
-      - name: Remove e2e from workspace (external path dep)
-        run: sed -i '/"packages\/e2e"/d' Cargo.toml
-
-      - name: Remove machine-specific patches
+      - name: Remove e2e from workspace and local patches
         run: |
+          sed -i '/"packages\/e2e"/d' Cargo.toml
+          sed -i '/^\[patch/,/^$/d' Cargo.toml
           rm -f .cargo/config.toml
           rm -f Cargo.lock
 
