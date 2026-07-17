@@ -39,6 +39,9 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y --no-install-recommends libgtk-3-dev libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
 
+      - name: Remove e2e from workspace (external path dep)
+        run: sed -i '/"packages\/e2e"/d' Cargo.toml
+
       - name: Install just
         uses: extractions/setup-just@v3
 
