@@ -63,27 +63,25 @@ impl syn::parse::Parse for ScssInput {
     fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
         let lookahead = input.lookahead1();
 
-        let mut source = None;
-        let mut scope = None;
-        let mut no_hash = false;
-
-        if lookahead.peek(syn::Ident) {
+        let (source, scope, no_hash) = if lookahead.peek(syn::Ident) {
             let ident: syn::Ident = input.parse()?;
 
             if ident == "file" {
                 input.parse::<syn::Token![:]>()?;
                 let path: syn::LitStr = input.parse()?;
-                let (s, nh) = parse_scope(input)?;
-                scope = s;
-                no_hash = nh;
-                source = Some(ScssSource::File(path.value()));
+                let (scope, no_hash) = parse_scope(input)?;
+                (ScssSource::File(path.value()), scope, no_hash)
             } else if ident == "scope" {
+                // Backward compatible: `scope: "...", "<inline scss>"`.
                 input.parse::<syn::Token![:]>()?;
                 let scope_lit: syn::LitStr = input.parse()?;
-                scope = Some(scope_lit.value());
                 input.parse::<syn::Token![,]>()?;
                 let lit: syn::LitStr = input.parse()?;
-                source = Some(ScssSource::Inline(lit.value()));
+                (
+                    ScssSource::Inline(lit.value()),
+                    Some(scope_lit.value()),
+                    false,
+                )
             } else {
                 return Err(syn::Error::new(ident.span(), "expected `file:`, `scope:`"));
             }
@@ -91,36 +89,35 @@ impl syn::parse::Parse for ScssInput {
             let lit: syn::LitStr = input.parse()?;
             let content = lit.value();
             let is_inline_scss = content.contains('{') || content.contains('.');
-            let (s, nh) = parse_scope(input)?;
-            scope = s;
-            no_hash = nh;
-            source = Some(if is_inline_scss {
+            let (scope, no_hash) = parse_scope(input)?;
+            let source = if is_inline_scss {
                 ScssSource::Inline(content)
             } else {
                 ScssSource::File(content)
-            });
+            };
+            (source, scope, no_hash)
         } else {
             let tts: proc_macro2::TokenStream = input.parse()?;
             let scss_content = tts.to_string();
             if scss_content.contains('{') || scss_content.starts_with('.') {
-                let (s, nh) = parse_scope(input)?;
-                scope = s;
-                no_hash = nh;
-                source = Some(ScssSource::Inline(scss_content));
+                let (scope, no_hash) = parse_scope(input)?;
+                (ScssSource::Inline(scss_content), scope, no_hash)
             } else {
                 return Err(lookahead.error());
             }
         };
 
         Ok(ScssInput {
-            source: source.unwrap(),
+            source,
             scope,
             no_hash,
         })
     }
 }
 
-/// Parse optional trailing `, scope: "..."` and `, no_hash`.
+/// Parse optional trailing `, scope: "..."` and `, no_hash`. Unknown options
+/// are rejected outright — a silently ignored `no_hash` is how unhashed
+/// global CSS used to end up hashed anyway.
 fn parse_scope(input: syn::parse::ParseStream) -> syn::Result<(Option<String>, bool)> {
     let mut scope = None;
     let mut no_hash = false;
@@ -138,6 +135,11 @@ fn parse_scope(input: syn::parse::ParseStream) -> syn::Result<(Option<String>, b
             scope = Some(scope_lit.value());
         } else if ident == "no_hash" {
             no_hash = true;
+        } else {
+            return Err(syn::Error::new(
+                ident.span(),
+                "unknown scss! option; expected `scope:` or `no_hash`",
+            ));
         }
     }
 
@@ -248,73 +250,168 @@ fn compile_scss_with_hashing(
     (css, class_map)
 }
 
+/// Rewrite class selectors to their hashed names for CSS-Modules-style
+/// scoping. Everything that is *not* a class selector must survive verbatim:
+///
+/// - A `.` only opens a class candidate when the next character can start a
+///   CSS ident (letter, `_`, `-`); a digit means a decimal literal (`0.08`,
+///   `.5rem`) and the dot is passed through untouched.
+/// - `//` and `/* */` comments, `'…'` / `"…"` strings, `url(…)`, and
+///   interpolation `#{…}` are scanned verbatim — dots inside them are never
+///   class selectors.
+/// - A candidate terminated by `(` is a sass built-in function call such as
+///   `map.get(…)`, not a selector, so the name is emitted unhashed.
+/// - The leading dot is preserved in the output (`.foo_hash`), and *any*
+///   non-ident character terminates a candidate — so `.foo&.bar`,
+///   `.foo:hover`, `.foo[x]`, and `:not(.foo)` all survive intact.
 fn process_class_names(scss: &str, hash: &str, class_map: &mut HashMap<String, String>) -> String {
-    let mut result = String::new();
-    let mut current_class = String::new();
-    let mut in_class_context = false;
-    let mut in_url = false;
-    let chars: Vec<char> = scss.chars().collect();
+    fn flush(
+        result: &mut String,
+        current: &mut String,
+        hash: &str,
+        map: &mut HashMap<String, String>,
+    ) {
+        if !current.is_empty() {
+            let hashed = format!("{}_{}", current, hash);
+            map.insert(current.clone(), hashed.clone());
+            result.push_str(&hashed);
+            current.clear();
+        }
+    }
 
-    for (idx, &ch) in chars.iter().enumerate() {
+    let chars: Vec<char> = scss.chars().collect();
+    let n = chars.len();
+    let mut result = String::with_capacity(scss.len());
+    let mut current_class = String::new();
+    let mut in_class = false;
+    let mut in_url = false;
+    let mut in_string: Option<char> = None;
+    let mut in_line_comment = false;
+    let mut in_block_comment = false;
+    let mut interp_depth = 0usize;
+
+    let mut i = 0;
+    while i < n {
+        let ch = chars[i];
+        let next = chars.get(i + 1).copied();
+
+        // ── verbatim states: comments, strings, url(...), #{...} ─────────
+        if in_line_comment {
+            result.push(ch);
+            if ch == '\n' {
+                in_line_comment = false;
+            }
+            i += 1;
+            continue;
+        }
+        if in_block_comment {
+            result.push(ch);
+            if ch == '*' && next == Some('/') {
+                result.push('/');
+                i += 2;
+                in_block_comment = false;
+            } else {
+                i += 1;
+            }
+            continue;
+        }
+        if let Some(quote) = in_string {
+            result.push(ch);
+            if ch == '\\' {
+                if let Some(escaped) = next {
+                    result.push(escaped);
+                    i += 2;
+                    continue;
+                }
+            }
+            if ch == quote {
+                in_string = None;
+            }
+            i += 1;
+            continue;
+        }
         if in_url {
             result.push(ch);
             if ch == ')' {
                 in_url = false;
             }
+            i += 1;
+            continue;
+        }
+        if interp_depth > 0 {
+            result.push(ch);
+            match ch {
+                '{' => interp_depth += 1,
+                '}' => interp_depth -= 1,
+                _ => {}
+            }
+            i += 1;
             continue;
         }
 
-        if ch == 'u' || ch == 'U' {
-            let rest: String = chars[idx..].iter().take(4).collect();
-            if rest.eq_ignore_ascii_case("url(") {
-                in_url = true;
-                result.push(ch);
+        // ── inside a class candidate: accumulate ident chars, else flush ──
+        if in_class {
+            if ch.is_alphanumeric() || ch == '-' || ch == '_' {
+                current_class.push(ch);
+                i += 1;
                 continue;
             }
+            if ch == '(' {
+                // `name(` — a sass built-in call like `map.get(`, not a class.
+                result.push_str(&current_class);
+                current_class.clear();
+                in_class = false;
+                result.push(ch);
+                i += 1;
+                continue;
+            }
+            flush(&mut result, &mut current_class, hash, class_map);
+            in_class = false;
+            // Fall through: `ch` may itself open a new state (a chained `.bar`
+            // in `.foo.bar`, a string, a comment, ...).
         }
 
-        if ch == '.' && !in_class_context {
-            in_class_context = true;
-            current_class.clear();
-        } else if in_class_context {
-            if ch == '.' {
-                if !current_class.is_empty() {
-                    let hashed_class = format!("{}_{}", current_class, hash);
-                    class_map.insert(current_class.clone(), hashed_class.clone());
-                    result.push_str(&hashed_class);
-                }
-                result.push('.');
+        // ── state entry ───────────────────────────────────────────────────
+        if ch == '/' && next == Some('/') {
+            in_line_comment = true;
+            result.push(ch);
+        } else if ch == '/' && next == Some('*') {
+            in_block_comment = true;
+            result.push(ch);
+        } else if ch == '"' || ch == '\'' {
+            in_string = Some(ch);
+            result.push(ch);
+        } else if ch == '#' && next == Some('{') {
+            interp_depth = 1;
+            result.push(ch);
+        } else if (ch == 'u' || ch == 'U')
+            && chars[i..]
+                .iter()
+                .take(4)
+                .collect::<String>()
+                .eq_ignore_ascii_case("url(")
+        {
+            in_url = true;
+            result.push(ch);
+        } else if ch == '.' {
+            // A dot only opens a class candidate when the next char can start
+            // a CSS ident; a digit means a decimal literal (`0.08`, `.5rem`).
+            let starts_class = next
+                .map(|c| c.is_alphabetic() || c == '_' || c == '-')
+                .unwrap_or(false);
+            result.push('.');
+            if starts_class {
+                in_class = true;
                 current_class.clear();
-            } else if ch == '&' {
-                current_class.clear();
-                in_class_context = false;
-                result.push(ch);
-            } else if ch.is_whitespace()
-                || ch == '{'
-                || ch == ','
-                || ch == '>'
-                || ch == '+'
-                || ch == ':'
-            {
-                if !current_class.is_empty() {
-                    let hashed_class = format!("{}_{}", current_class, hash);
-                    class_map.insert(current_class.clone(), hashed_class.clone());
-                    result.push_str(&hashed_class);
-                }
-                result.push(ch);
-                in_class_context = false;
-            } else {
-                current_class.push(ch);
             }
         } else {
             result.push(ch);
         }
+        i += 1;
     }
 
-    if in_class_context && !current_class.is_empty() {
-        let hashed_class = format!("{}_{}", current_class, hash);
-        class_map.insert(current_class.clone(), hashed_class.clone());
-        result.push_str(&hashed_class);
+    if in_class {
+        flush(&mut result, &mut current_class, hash, class_map);
     }
 
     result
@@ -333,7 +430,7 @@ mod tests {
             }
         "#;
 
-        let (css, class_map) = compile_scss_with_hashing(scss, None);
+        let (css, class_map) = compile_scss_with_hashing(scss, None, false);
 
         assert!(css.contains("background:"));
         assert!(!class_map.is_empty());
@@ -351,7 +448,7 @@ mod tests {
             }
         "#;
 
-        let (css, class_map) = compile_scss_with_hashing(scss, None);
+        let (css, class_map) = compile_scss_with_hashing(scss, None, false);
 
         assert!(css.contains("width:"));
         assert!(class_map.contains_key("container"));
@@ -365,8 +462,8 @@ mod tests {
             }
         "#;
 
-        let (_css1, map1) = compile_scss_with_hashing(scss, Some("component1"));
-        let (_css2, map2) = compile_scss_with_hashing(scss, Some("component2"));
+        let (_css1, map1) = compile_scss_with_hashing(scss, Some("component1"), false);
+        let (_css2, map2) = compile_scss_with_hashing(scss, Some("component2"), false);
 
         assert_ne!(map1.get("button").unwrap(), map2.get("button").unwrap());
     }
@@ -379,7 +476,7 @@ mod tests {
             }
         "#;
 
-        let (css, class_map) = compile_scss_with_hashing(scss, None);
+        let (css, class_map) = compile_scss_with_hashing(scss, None, false);
 
         assert!(css.contains("url("));
         assert!(class_map.contains_key("card"));
@@ -394,7 +491,7 @@ mod tests {
             }
         "#;
 
-        let (css, class_map) = compile_scss_with_hashing(scss, None);
+        let (css, class_map) = compile_scss_with_hashing(scss, None, false);
 
         assert!(class_map.contains_key("foo"));
         assert!(class_map.contains_key("bar"));
@@ -402,5 +499,104 @@ mod tests {
         let bar_hashed = class_map.get("bar").unwrap();
         assert!(css.contains(foo_hashed));
         assert!(css.contains(bar_hashed));
+    }
+
+    #[test]
+    fn test_no_hash_passes_source_through_verbatim() {
+        let scss = r"
+            $code-bg: #131e32;
+            .button { background: rgba(122, 162, 247, 0.08); }
+        ";
+
+        let (css, class_map) = compile_scss_with_hashing(scss, None, true);
+
+        assert!(class_map.is_empty());
+        assert!(css.contains(".button"), "class kept verbatim, got: {css}");
+        assert!(css.contains("0.08"), "decimal kept verbatim, got: {css}");
+        assert!(!css.contains("CSS generation failed"), "got: {css}");
+    }
+
+    #[test]
+    fn test_hashed_output_keeps_leading_dot() {
+        let scss = ".button { color: red; }";
+        let (css, class_map) = compile_scss_with_hashing(scss, None, false);
+
+        let hashed = class_map.get("button").unwrap();
+        assert!(
+            css.contains(&format!(".{hashed}")),
+            "selector must keep its dot, got: {css}"
+        );
+    }
+
+    #[test]
+    fn test_decimal_literals_are_not_hashed() {
+        // Regression: `0.08` used to be read as class `08);` etc., corrupting
+        // the SCSS so grass failed with `expected "{"` on the *next* line.
+        let scss = r"
+            $accent-bg: rgba(122, 162, 247, 0.08);
+            $code-bg: #131e32;
+            .card { background: $accent-bg; box-shadow: 0 2px 12px rgba(0, 0, 0, .06); opacity: 0.5; }
+        ";
+
+        let (css, class_map) = compile_scss_with_hashing(scss, None, false);
+
+        assert!(!css.contains("CSS generation failed"), "got: {css}");
+        assert!(css.contains("0.08"), "got: {css}");
+        assert!(css.contains(".06"), "got: {css}");
+        assert!(css.contains("0.5"), "got: {css}");
+        assert_eq!(
+            class_map.keys().collect::<Vec<_>>(),
+            vec![&"card".to_string()]
+        );
+    }
+
+    #[test]
+    fn test_comments_strings_and_interpolation_are_verbatim() {
+        let scss = r"
+            // .from-line-comment
+            /* .from-block-comment */
+            $bg: #0b1220;
+            :root { --bg: #{$bg}; }
+            .card { content: '.from-string'; }
+        ";
+
+        let (_css, class_map) = compile_scss_with_hashing(scss, None, false);
+
+        assert!(class_map.contains_key("card"));
+        assert!(!class_map.contains_key("from-line-comment"));
+        assert!(!class_map.contains_key("from-block-comment"));
+        assert!(!class_map.contains_key("from-string"));
+        assert!(!class_map.contains_key("bg"), "interpolation left alone");
+    }
+
+    #[test]
+    fn test_sass_builtin_dot_calls_are_not_hashed() {
+        let scss = r"
+            @use 'sass:map';
+            .card { color: map.get($theme, fg); }
+        ";
+
+        let (_css, class_map) = compile_scss_with_hashing(scss, None, false);
+
+        assert!(class_map.contains_key("card"));
+        assert!(
+            !class_map.contains_key("get"),
+            "map.get() is a call, not a class"
+        );
+    }
+
+    #[test]
+    fn test_parent_selector_and_pseudo_classes_survive() {
+        let scss =
+            ".foo:hover { color: red; } .bar&.active { color: blue; } :not(.baz) { opacity: 1; }";
+        let (css, class_map) = compile_scss_with_hashing(scss, None, false);
+
+        for name in ["foo", "bar", "active", "baz"] {
+            let hashed = class_map
+                .get(name)
+                .unwrap_or_else(|| panic!("{name} hashed"));
+            assert!(css.contains(&format!(".{hashed}")), "got: {css}");
+        }
+        assert!(css.contains(":hover"), "got: {css}");
     }
 }
