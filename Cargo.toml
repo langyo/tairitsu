@@ -47,6 +47,7 @@ version = "0.5.18"
 authors = ["langyo <langyo.china@gmail.com>"]
 edition = "2021"
 rust-version = "1.91"
+license = "MIT"
 license-file = "LICENSE"
 repository = "https://github.com/celestia-island/tairitsu"
 
@@ -67,7 +68,7 @@ tokio = { version = "^1", default-features = false, features = [
 ] }
 wasmtime = { version = "^45", features = ["component-model", "winch"] }
 wasmtime-wasi = "^45"
-reqwest = { version = "^0.13", default-features = false, features = ["json", "blocking"] }
+reqwest = { version = "^0.13", default-features = false, features = ["json", "blocking", "rustls"] }
 tairitsu = { version = "^0.5.14", path = "packages/runtime" }
 tairitsu-macros = { version = "^0.5.14", path = "packages/macros" }
 tairitsu-vdom = { version = "^0.5.14", path = "packages/vdom" }

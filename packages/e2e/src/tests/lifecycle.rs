@@ -26,7 +26,7 @@ impl LifecycleTests {
         tokio::time::sleep(Duration::from_millis(500)).await;
 
         // Check if #app element exists (component should be mounted)
-        let app_element = driver.find("app").await;
+        let app_element = driver.find("#app").await;
 
         let duration = start.elapsed().as_millis() as u64;
 

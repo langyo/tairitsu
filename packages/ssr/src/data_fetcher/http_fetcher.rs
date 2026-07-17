@@ -8,6 +8,14 @@ use async_trait::async_trait;
 
 use super::{cache::Cache, error::FetchError, fetcher::Fetcher, FetchConfig};
 
+#[cfg(feature = "data-fetcher")]
+fn build_client(config: &FetchConfig) -> Option<reqwest::Client> {
+    reqwest::Client::builder()
+        .timeout(config.timeout)
+        .build()
+        .ok()
+}
+
 /// HTTP fetcher for making HTTP requests with caching support
 #[derive(Clone)]
 pub struct HttpFetcher {
@@ -30,10 +38,7 @@ impl HttpFetcher {
     /// Create a new HTTP fetcher with the given configuration
     pub fn with_config(config: FetchConfig) -> Self {
         #[cfg(feature = "data-fetcher")]
-        let client = reqwest::Client::builder()
-            .timeout(config.timeout)
-            .build()
-            .ok();
+        let client = build_client(&config);
 
         #[cfg(not(feature = "data-fetcher"))]
         let _ = config; // Suppress unused warning
@@ -54,10 +59,7 @@ impl HttpFetcher {
     #[allow(unused_variables)]
     pub fn with_cache(config: FetchConfig, cache: Arc<Cache>) -> Self {
         #[cfg(feature = "data-fetcher")]
-        let client = reqwest::Client::builder()
-            .timeout(config.timeout)
-            .build()
-            .ok();
+        let client = build_client(&config);
 
         Self {
             #[cfg(feature = "data-fetcher")]

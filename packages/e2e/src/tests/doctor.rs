@@ -6,8 +6,8 @@
 use anyhow::Result;
 use std::{fs, path::PathBuf, process::Command, time::Instant};
 
-use tempfile::TempDir;
 use crate::shirabe_driver::ShirabeDriver;
+use tempfile::TempDir;
 use tracing::info;
 
 use crate::tests::{Test, TestResult, TestStatus};

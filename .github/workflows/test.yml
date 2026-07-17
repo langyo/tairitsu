@@ -25,6 +25,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Remove e2e/website from workspace and local patches
+        run: |
+          sed -i '/"packages\/e2e",/d; s/,"packages\/e2e"//g' Cargo.toml
+          sed -i '/"examples\/website",/d; s/,"examples\/website"//g' Cargo.toml
+          sed -i '/path = "\.\.\/hikari/d' Cargo.toml
+          rm -f .cargo/config.toml Cargo.lock
+
       - name: Setup toolchain
         uses: dtolnay/rust-toolchain@stable
         with:

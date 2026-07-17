@@ -18,6 +18,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Remove e2e/website from workspace and local patches
+        run: |
+          sed -i '/"packages\/e2e",/d; s/,"packages\/e2e"//g' Cargo.toml
+          sed -i '/"examples\/website",/d; s/,"examples\/website"//g' Cargo.toml
+          sed -i '/path = "\.\.\/hikari/d' Cargo.toml
+          rm -f .cargo/config.toml Cargo.lock
+
       - name: Install cargo-audit
         uses: dtolnay/rust-toolchain@stable
       - run: cargo install cargo-audit --locked
@@ -30,6 +37,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      - name: Remove e2e/website from workspace and local patches
+        run: |
+          sed -i '/"packages\/e2e",/d; s/,"packages\/e2e"//g' Cargo.toml
+          sed -i '/"examples\/website",/d; s/,"examples\/website"//g' Cargo.toml
+          sed -i '/path = "\.\.\/hikari/d' Cargo.toml
+          rm -f .cargo/config.toml Cargo.lock
 
       - name: Install cargo-deny
         uses: dtolnay/rust-toolchain@stable
@@ -50,7 +64,7 @@ jobs:
           node-version: '22'
 
       - name: Install dependencies
-        run: npm ci
+        run: npm install --omit=dev
         working-directory: .
 
       - name: Run npm audit

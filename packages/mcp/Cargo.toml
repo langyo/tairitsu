@@ -3,6 +3,7 @@ name = "tairitsu-mcp"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
+license.workspace = true
 license-file.workspace = true
 repository.workspace = true
 description = "Tairitsu MCP server — vision analysis + browser automation tools"

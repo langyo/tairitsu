@@ -105,7 +105,7 @@ impl FormValidationTests {
             tokio::time::sleep(Duration::from_millis(100)).await;
 
             // Trigger validation (blur)
-            email.send_keys("Tab").await?;
+            email.press_key("Tab").await?;
             tokio::time::sleep(Duration::from_millis(100)).await;
 
             // Check for error
@@ -122,7 +122,7 @@ impl FormValidationTests {
             email.send_keys("test@example.com").await?;
             tokio::time::sleep(Duration::from_millis(100)).await;
 
-            email.send_keys("Tab").await?;
+            email.press_key("Tab").await?;
             tokio::time::sleep(Duration::from_millis(100)).await;
 
             // Error should be gone or show success

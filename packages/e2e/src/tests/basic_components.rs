@@ -28,10 +28,8 @@ impl BasicComponentsTests {
 
         tokio::time::sleep(Duration::from_millis(200)).await;
 
-        let class_attr = button
-            .attr("class")
-            .await?;
-if !class_attr.contains("tairitsu-button") {
+        let class_attr = button.attr("class").await?;
+        if !class_attr.contains("tairitsu-button") {
             return Ok(TestResult::failure(
                 "Button",
                 "Button element missing 'tairitsu-button' class",
@@ -65,10 +63,8 @@ if !class_attr.contains("tairitsu-button") {
         input.send_keys("test input from E2E").await?;
         info!("Text entered successfully");
 
-        let class_attr = input
-            .attr("class")
-            .await?;
-if !class_attr.contains("tairitsu-input") {
+        let class_attr = input.attr("class").await?;
+        if !class_attr.contains("tairitsu-input") {
             return Ok(TestResult::failure(
                 "Input",
                 "Input element missing 'tairitsu-input' class",

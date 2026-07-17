@@ -7,6 +7,15 @@ use anyhow::{Context, Result};
 use serde::Deserialize;
 use std::time::Duration;
 
+#[derive(Deserialize)]
+struct ApiEnvelope<T> {
+    #[expect(dead_code)]
+    ok: bool,
+    data: T,
+    #[expect(dead_code)]
+    error: Option<String>,
+}
+
 pub struct ShirabeDriver {
     client: reqwest::Client,
     base_url: String,
@@ -39,7 +48,12 @@ impl ShirabeDriver {
             tokio::time::sleep(Duration::from_millis(500)).await;
             if let Ok(r) = client.get(format!("{}/health", server_base)).send().await {
                 if r.status().is_success() {
-                    return Ok(Self { client, base_url: server_base, _server: Some(server), shutdown_tx: Some(shutdown_tx) });
+                    return Ok(Self {
+                        client,
+                        base_url: server_base,
+                        _server: Some(server),
+                        shutdown_tx: Some(shutdown_tx),
+                    });
                 }
             }
         }
@@ -48,35 +62,93 @@ impl ShirabeDriver {
     }
 
     pub async fn goto(&self, url: &str) -> Result<()> {
-        self.client.post(format!("{}/navigate", self.base_url)).json(&serde_json::json!({"url":url,"wait_for":"load"})).send().await?.error_for_status()?;
+        self.client
+            .post(format!("{}/navigate", self.base_url))
+            .json(&serde_json::json!({"url":url,"wait_for":"load"}))
+            .send()
+            .await?
+            .error_for_status()?;
         Ok(())
     }
 
     pub async fn find(&self, selector: &str) -> Result<ShirabeElement> {
-        Ok(ShirabeElement { client: self.client.clone(), base_url: self.base_url.clone(), selector: selector.to_string() })
+        Ok(ShirabeElement {
+            client: self.client.clone(),
+            base_url: self.base_url.clone(),
+            selector: selector.to_string(),
+        })
     }
 
     pub async fn find_all(&self, selector: &str) -> Result<Vec<ShirabeElement>> {
-        #[derive(Deserialize)] struct R { count: Option<u64>, }
-        let r: R = self.client.get(format!("{}/dom", self.base_url)).query(&[("selector",selector),("all","true")]).send().await?.json().await?;
-        let n = r.count.unwrap_or(0) as usize;
-        Ok((0..n).map(|i| ShirabeElement { client: self.client.clone(), base_url: self.base_url.clone(), selector: format!("{selector}:nth-child({})", i+1) }).collect())
+        #[derive(Deserialize)]
+        struct D {
+            count: u64,
+        }
+        let env: ApiEnvelope<D> = self
+            .client
+            .get(format!("{}/dom", self.base_url))
+            .query(&[("selector", selector), ("all", "true")])
+            .send()
+            .await?
+            .json()
+            .await?;
+        let n = env.data.count as usize;
+        Ok((0..n)
+            .map(|i| ShirabeElement {
+                client: self.client.clone(),
+                base_url: self.base_url.clone(),
+                selector: format!("{selector}:nth-child({})", i + 1),
+            })
+            .collect())
     }
 
     pub async fn execute_script(&self, script: &str) -> Result<serde_json::Value> {
-        #[derive(Deserialize)] struct R { result: serde_json::Value }
-        let r: R = self.client.post(format!("{}/evaluate", self.base_url)).json(&serde_json::json!({"expression":script,"await_promise":false})).send().await?.json().await?;
-        Ok(r.result)
+        #[derive(Deserialize)]
+        struct D {
+            #[expect(dead_code)]
+            r#type: Option<String>,
+            result: serde_json::Value,
+        }
+        let env: ApiEnvelope<D> = self
+            .client
+            .post(format!("{}/evaluate", self.base_url))
+            .json(&serde_json::json!({"expression":script,"await_promise":false}))
+            .send()
+            .await?
+            .json()
+            .await?;
+        Ok(env.data.result)
     }
 
-    pub async fn execute(&self, script: &str, _args: Vec<serde_json::Value>) -> Result<serde_json::Value> {
+    pub async fn execute(
+        &self,
+        script: &str,
+        _args: Vec<serde_json::Value>,
+    ) -> Result<serde_json::Value> {
         self.execute_script(script).await
     }
 
     pub async fn screenshot(&self) -> Result<Vec<u8>> {
-        #[derive(Deserialize)] struct R { data: String }
-        let r: R = self.client.post(format!("{}/screenshot", self.base_url)).json(&serde_json::json!({"full_page":true})).send().await?.json().await?;
-        base64::Engine::decode(&base64::engine::general_purpose::STANDARD, &r.data).context("decode screenshot")
+        #[derive(Deserialize)]
+        struct D {
+            data: String,
+            #[expect(dead_code)]
+            mime_type: Option<String>,
+            #[expect(dead_code)]
+            width: Option<u32>,
+            #[expect(dead_code)]
+            height: Option<u32>,
+        }
+        let env: ApiEnvelope<D> = self
+            .client
+            .post(format!("{}/screenshot", self.base_url))
+            .json(&serde_json::json!({"full_page":true}))
+            .send()
+            .await?
+            .json()
+            .await?;
+        base64::Engine::decode(&base64::engine::general_purpose::STANDARD, &env.data.data)
+            .context("decode screenshot")
     }
 
     pub async fn current_url(&self) -> Result<String> {
@@ -85,19 +157,31 @@ impl ShirabeDriver {
     }
 
     pub async fn back(&self) -> Result<()> {
-        self.client.post(format!("{}/back", self.base_url)).send().await?.error_for_status()?;
+        self.client
+            .post(format!("{}/back", self.base_url))
+            .send()
+            .await?
+            .error_for_status()?;
         Ok(())
     }
 
     pub async fn forward(&self) -> Result<()> {
-        self.client.post(format!("{}/forward", self.base_url)).send().await?.error_for_status()?;
+        self.client
+            .post(format!("{}/forward", self.base_url))
+            .send()
+            .await?
+            .error_for_status()?;
         Ok(())
     }
 
-    pub fn base_url(&self) -> &str { &self.base_url }
+    pub fn base_url(&self) -> &str {
+        &self.base_url
+    }
 
     pub async fn quit(mut self) -> Result<()> {
-        if let Some(tx) = self.shutdown_tx.take() { let _ = tx.send(()); }
+        if let Some(tx) = self.shutdown_tx.take() {
+            let _ = tx.send(());
+        }
         tokio::time::sleep(Duration::from_millis(200)).await;
         Ok(())
     }
@@ -111,7 +195,12 @@ pub struct ShirabeElement {
 
 impl ShirabeElement {
     pub async fn click(&self) -> Result<()> {
-        self.client.post(format!("{}/click", self.base_url)).json(&serde_json::json!({"selector":self.selector})).send().await?.error_for_status()?;
+        self.client
+            .post(format!("{}/click", self.base_url))
+            .json(&serde_json::json!({"selector":self.selector}))
+            .send()
+            .await?
+            .error_for_status()?;
         Ok(())
     }
 
@@ -126,52 +215,112 @@ impl ShirabeElement {
     }
 
     pub async fn press_key(&self, key: &str) -> Result<()> {
-        self.client.post(format!("{}/press", self.base_url)).json(&serde_json::json!({"key":key})).send().await?.error_for_status()?;
+        self.client
+            .post(format!("{}/press", self.base_url))
+            .json(&serde_json::json!({"key":key}))
+            .send()
+            .await?
+            .error_for_status()?;
         Ok(())
     }
 
     pub async fn attr(&self, name: &str) -> Result<String> {
-        #[derive(Deserialize)] struct R { attributes: Option<std::collections::HashMap<String,String>> }
-        match self.client.get(format!("{}/dom", self.base_url)).query(&[("selector",self.selector.as_str()),("attribute",name)]).send().await {
+        #[derive(Deserialize)]
+        struct R {
+            attributes: Option<std::collections::HashMap<String, String>>,
+        }
+        match self
+            .client
+            .get(format!("{}/dom", self.base_url))
+            .query(&[("selector", self.selector.as_str()), ("attribute", name)])
+            .send()
+            .await
+        {
             Ok(r) if r.status().is_success() => {
                 let body: R = r.json().await?;
-                Ok(body.attributes.and_then(|mut m| m.remove(name)).unwrap_or_default())
+                Ok(body
+                    .attributes
+                    .and_then(|mut m| m.remove(name))
+                    .unwrap_or_default())
             }
-            _ => Ok(String::new())
+            _ => Ok(String::new()),
         }
     }
 
     pub async fn text(&self) -> Result<String> {
-        #[derive(Deserialize)] struct R { text: Option<String> }
-        match self.client.get(format!("{}/dom", self.base_url)).query(&[("selector",self.selector.as_str())]).send().await {
-            Ok(r) if r.status().is_success() => { let b: R = r.json().await?; Ok(b.text.unwrap_or_default()) }
-            _ => Ok(String::new())
+        #[derive(Deserialize)]
+        struct R {
+            text: Option<String>,
+        }
+        match self
+            .client
+            .get(format!("{}/dom", self.base_url))
+            .query(&[("selector", self.selector.as_str())])
+            .send()
+            .await
+        {
+            Ok(r) if r.status().is_success() => {
+                let b: R = r.json().await?;
+                Ok(b.text.unwrap_or_default())
+            }
+            _ => Ok(String::new()),
         }
     }
 
     pub async fn inner_html(&self) -> Result<String> {
-        #[derive(Deserialize)] struct R { html: Option<String> }
-        match self.client.get(format!("{}/dom", self.base_url)).query(&[("selector",self.selector.as_str())]).send().await {
-            Ok(r) if r.status().is_success() => { let b: R = r.json().await?; Ok(b.html.unwrap_or_default()) }
-            _ => Ok(String::new())
+        #[derive(Deserialize)]
+        struct R {
+            html: Option<String>,
+        }
+        match self
+            .client
+            .get(format!("{}/dom", self.base_url))
+            .query(&[("selector", self.selector.as_str())])
+            .send()
+            .await
+        {
+            Ok(r) if r.status().is_success() => {
+                let b: R = r.json().await?;
+                Ok(b.html.unwrap_or_default())
+            }
+            _ => Ok(String::new()),
         }
     }
 
     pub async fn is_displayed(&self) -> Result<bool> {
-        #[derive(Deserialize)] struct R { visible: Option<bool> }
-        match self.client.get(format!("{}/dom", self.base_url)).query(&[("selector",self.selector.as_str())]).send().await {
-            Ok(r) if r.status().is_success() => { let b: R = r.json().await?; Ok(b.visible.unwrap_or(false)) }
-            _ => Ok(false)
+        #[derive(Deserialize)]
+        struct R {
+            visible: Option<bool>,
+        }
+        match self
+            .client
+            .get(format!("{}/dom", self.base_url))
+            .query(&[("selector", self.selector.as_str())])
+            .send()
+            .await
+        {
+            Ok(r) if r.status().is_success() => {
+                let b: R = r.json().await?;
+                Ok(b.visible.unwrap_or(false))
+            }
+            _ => Ok(false),
         }
     }
 
     /// Find a child element within this element using a CSS selector.
     pub async fn find(&self, child_selector: &str) -> Result<ShirabeElement> {
-        let combined = if child_selector.starts_with('.') || child_selector.starts_with('#') || child_selector.starts_with('[') {
+        let combined = if child_selector.starts_with('.')
+            || child_selector.starts_with('#')
+            || child_selector.starts_with('[')
+        {
             format!("{} {}", self.selector, child_selector)
         } else {
             format!("{} {}", self.selector, child_selector)
         };
-        Ok(ShirabeElement { client: self.client.clone(), base_url: self.base_url.clone(), selector: combined })
+        Ok(ShirabeElement {
+            client: self.client.clone(),
+            base_url: self.base_url.clone(),
+            selector: combined,
+        })
     }
 }
