@@ -879,7 +879,7 @@ interface offline-audio-context {
     type offline-audio-context-handle = u64;
 
     /// `startRendering()` operation.
-    start-rendering: func(self: offline-audio-context-handle) -> u64;
+    start-rendering: func(self: offline-audio-context-handle, chunk-size: option<u32>) -> u64;
 
     /// `resume()` operation.
     resume: func(self: offline-audio-context-handle) -> u64;
@@ -887,8 +887,11 @@ interface offline-audio-context {
     /// `suspend()` operation.
     suspend: func(self: offline-audio-context-handle, suspend-time: f64) -> u64;
 
+    /// `close()` operation.
+    close: func(self: offline-audio-context-handle) -> u64;
+
     /// `length` attribute — getter.
-    get-length: func(self: offline-audio-context-handle) -> u32;
+    get-length: func(self: offline-audio-context-handle) -> option<u32>;
 
     /// `oncomplete` attribute — getter.
     get-oncomplete: func(self: offline-audio-context-handle) -> u64;
